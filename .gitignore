@@ -1,0 +1,46 @@
+# -----------------------
+# Python cache & compiled files
+__pycache__/
+*.py[cod]
+*.so
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# VS Code project files
+.vscode/
+
+# Virtual environment
+.venv/
+env/
+venv/
+
+# Output folders (simulations, figures, logs)
+outputs/
+
+# Neper outputs
+*.tess
+*.tesr
+*.ori
+*.geo
+*.sto
+*.stat
+*.png
+*.pdf
+
+# Python packaging
+*.egg-info/
+dist/
+build/
+
+# Logs and reports
+*.log
+*.tmp
+*.bak
+*.npy
+*.npz
+.DS_Store
+
+# Mac & system artifacts
+.DS_Store
+Thumbs.db

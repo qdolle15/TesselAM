@@ -15,6 +15,7 @@ from grain_growth_model.core.grains import generate_initial_substrate_grains, in
 from grain_growth_model.core.meltpool import compute_normalized_gradient_at_point
 from grain_growth_model.core.growth import compute_easy_growth_directions, simulate_grain_growth
 from grain_growth_model.core.competition import split_seeds_into_batches, resolve_growth_conflicts, resolve_batch_overlaps
+from grain_growth_model.neper.runner import EBSD_like
 
 np.seterr(divide='ignore', invalid='ignore')
 np.set_printoptions(suppress=True)
@@ -48,6 +49,7 @@ def main(config_path):
     tracking = {}
     tracking['date start simulation'] = time.ctime(time.time())
     total_grains_created = 0
+    total_seeds_created = 0
     laser_z = config.THERMAL_HISTORY[0]["height"]
 
     if debug:
@@ -73,7 +75,7 @@ def main(config_path):
         oris=substrate_oris,
         indexes=substrate_ids
         )
-    tracking['substrate grains'] = len(substrate_ids)
+    tracking['No substrate grains generated'] = len(substrate_ids)
 
     # Beads management
     for layer_idx in range(len(config.THERMAL_HISTORY)):
@@ -120,9 +122,9 @@ def main(config_path):
         # Creating indexes that have never been attributed before for following \
         # potential grain growth evolution across layers. 
         total_grains_created += grains_generated
-        tracking[layer_idx]['grains from epitaxy'] = len(interface_ids)
-        tracking[layer_idx]['grains added to substrate'] = grains_generated
-        tracking[layer_idx]['total_grains'] = len(extended_interface_ids)
+        tracking[layer_idx]['grains for epitaxy'] = len(interface_ids)
+        tracking[layer_idx]['grains nucleated'] = grains_generated
+        tracking[layer_idx]['total grains for growth'] = len(extended_interface_ids)
 
         extended_gradients_at_interface = compute_normalized_gradient_at_point(
             y=extended_interface_coords[:, 1],
@@ -153,6 +155,7 @@ def main(config_path):
             sub_extended_interface_coords = data["coordinates"]
             sub_extended_interface_oris = data["orientations"]
             sub_extended_interface_thermal_gradient = data["gradient interface"]
+            sub_extended_interface_id = data["id"]
 
             sub_dendrite_growth_dirs = compute_easy_growth_directions(
                 euler_angles=sub_extended_interface_oris,
@@ -174,9 +177,10 @@ def main(config_path):
                     arrow_length=0.1
                 )
 
-            lengths, mask = resolve_growth_conflicts(
+            lengths, mask, conflict_history = resolve_growth_conflicts(
                 growth_directions=sub_dendrite_growth_dirs,
                 coordinates_seeds=sub_extended_interface_coords,
+                global_id=sub_extended_interface_id,
                 thermal_layers=config.THERMAL_HISTORY,
                 layer_index=layer_idx,
                 meltpool_z=laser_z,
@@ -196,7 +200,7 @@ def main(config_path):
             simulation_length=config.LENGTH_SIMULATION
         )
 
-        reached_top = simulate_grain_growth(
+        reached_top, new_seeds = simulate_grain_growth(
             coordinates_seeds=extended_interface_coords,
             growth_directions=extended_dendrite_growth_dirs,
             grain_ids=extended_interface_ids,
@@ -207,16 +211,18 @@ def main(config_path):
             current_z=laser_z,
             simulation_length=config.LENGTH_SIMULATION,
             z_ultimate=config.Z_ULTIMATE,
-            inter_seeds_distance=None,
+            inter_seeds_distance=config.D_seeds,
             layer_index=layer_idx,
             noise_neper=config.NOISE_NEPER,
             output_folder=working_dir
         )
 
+        total_seeds_created += new_seeds
         tracking[layer_idx]["reached_top"] = reached_top
         laser_z += config.BD_INCREMENTS
 
-    tracking["grains_created_total"] = total_grains_created
+    tracking["No of grains generated"] = total_grains_created
+    tracking["No of seeds generated"] = total_seeds_created
     generate_report(tracking, os.path.join(working_dir, "___report_simulation.txt"))
 
     visualization_results = {}
@@ -224,6 +230,7 @@ def main(config_path):
         domain_dir = os.path.join(working_dir, f"domain_{i+1}")
         os.makedirs(domain_dir, exist_ok=True)
         show_domains(config.THERMAL_HISTORY, domain_dir, save=True, domain=domain, cut_view=config.CUT_VIEWS)
+        information = EBSD_like(domain=domain, cut_view=config.CUT_VIEWS, working_dir=output_paths['data_layers'], )
         visualization_results[i] = domain
 
     generate_visualization_report(
@@ -233,17 +240,18 @@ def main(config_path):
         plans=config.CUT_VIEWS
     )
 
-    print(f"Simulation complete. Results saved in: {working_dir}")
+    print(f"\nSimulation complete. Results saved in: {working_dir}")
 
 
 if __name__ == "__main__":
     # example: python main.py configs/config_high_gradient.py
 
-    if len(sys.argv) < 2:
-        print("Please provide the path to a config file.")
-        print("Usage: python main.py configs/config_high_gradient.py")
-        sys.exit(1)
+    # if len(sys.argv) < 2:
+    #     print("Please provide the path to a config file.")
+    #     print("Usage: python main.py configs/config_high_gradient.py")
+    #     sys.exit(1)
 
     start = time.time()
-    main(config_path=sys.argv[1])
+    # main(config_path=sys.argv[1])
+    main(config_path="./configs/config_manuscript.py")
     print(f"\nElapsed time: {round(time.time() - start, 2)} seconds")

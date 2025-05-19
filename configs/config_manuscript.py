@@ -3,7 +3,7 @@ import numpy as np
 # ========== Simulation Parameters ==========
 
 START_SIMULATION = True
-RANDOM_SEED = 42
+RANDOM_SEED = 15
 np.random.seed(RANDOM_SEED)
 
 # Dimensions of the simulation domain
@@ -16,7 +16,7 @@ D0 = 0.015
 D_seeds = 0.01
 
 # Grain competition threshold
-THRESHOLD = 0.5
+THRESHOLD = 1
 
 # Add random noise to growth
 NOISE_NEPER = 0
@@ -37,30 +37,31 @@ EGD_FAMILY = np.array([
 # ========== Thermal History ==========
 
 THERMAL_HISTORY = {
-    0: {
-        "length": 16,
-        "width": 2.0,
-        "height": 0.5,
-        "PD": 1,
-        "epitaxy": False
+    0:{
+        'length':16,
+        'width':6,
+        'height':1.2,
+        'PD':1,
+        'epitaxy':False
     },
-    1: {
-        "length": 16,
-        "width": 2.0,
-        "height": 0.5,
-        "PD": 1,
-        "epitaxy": True
+    1:{
+        'length':17,
+        'width':6,
+        'height':1.3,
+        'PD':1,
+        'epitaxy':True
     },
-    2: {
-        "length": 16,
-        "width": 2.0,
-        "height": 0.5,
-        "PD": 1,
-        "epitaxy": True
-    }
+    2:{
+        'length':18,
+        'width':6,
+        'height':1.4,
+        'PD':1,
+        'epitaxy':True
+    },
 }
 
 # --------------------------------------------
+START = True
 try:
     assert np.all(
         np.asarray([THERMAL_HISTORY[i]['width'] > WIDTH_SIMULATION for i in THERMAL_HISTORY.keys()])

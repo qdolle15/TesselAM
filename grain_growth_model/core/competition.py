@@ -51,7 +51,8 @@ def split_seeds_into_batches(
 
 def resolve_growth_conflicts(
         coordinates_seeds: np.ndarray,
-        growth_directions: np.ndarray, 
+        growth_directions: np.ndarray,
+        global_id: np.ndarray,
         thermal_layers: dict, 
         layer_index: int, 
         meltpool_z:float,
@@ -68,6 +69,7 @@ def resolve_growth_conflicts(
     ----------
         coordinates_seeds (ndarray) (N, 3): Starting positions of grains.
         growth_directions (ndarray) (N, 3): Easy growth direction vectors (OOI).
+        global_id (ndarray) (N,): Global grain id of the simulation for grains involved in this batch.
         thermal_layers (dict): Full thermal history.
         layer_index (int): Index of the current layer.
         meltpool_z (float): Actual height of the z-coordinates of the ellipse center.
@@ -81,7 +83,21 @@ def resolve_growth_conflicts(
     -------
         final_lengths (ndarray): Length of each surviving dendrite.
         alive (ndarray): Boolean array of grains that did not lose during the competitive growth phase.
+        grain_conflict_history (dict): History of grains conflict.
     """
+
+    # Tracking of conflict history.
+    grain_conflict_history = {
+        int(id_):{
+            "opponent":[],
+            "coordinates conflict opponent": [],
+            "direction conflict opponent": [],
+            "gradient conflict opponent": [],
+            "coordinates conflict": [],
+            "gradient conflict": [],
+        } for id_ in global_id      
+    }
+
     alive = np.ones(len(coordinates_seeds), dtype=bool)
     dendrite_lengths = np.ones(len(coordinates_seeds)) * 1e4
 
@@ -144,6 +160,22 @@ def resolve_growth_conflicts(
                         lambda_matrix[i, :] = np.nan
                         lambda_matrix[:, i] = np.nan
 
+                    # data tracking 
+                    # id_grain[i] make te correspondence between local id and global id of the whole simulation
+                    grain_conflict_history[global_id[i]]["opponent"].append(int(global_id[j]))
+                    grain_conflict_history[global_id[i]]["coordinates conflict opponent"].append((pj))
+                    grain_conflict_history[global_id[i]]["direction conflict opponent"].append(growth_directions[j].tolist())
+                    grain_conflict_history[global_id[i]]["gradient conflict opponent"].append(Gj.tolist())
+                    grain_conflict_history[global_id[i]]["coordinates conflict"].append((pi))
+                    grain_conflict_history[global_id[i]]["gradient conflict"].append(Gi.tolist())
+                    #
+                    grain_conflict_history[global_id[j]]["opponent"].append(int(global_id[i]))
+                    grain_conflict_history[global_id[j]]["coordinates conflict opponent"].append((pi))
+                    grain_conflict_history[global_id[j]]["direction conflict opponent"].append(growth_directions[i].tolist())
+                    grain_conflict_history[global_id[j]]["gradient conflict opponent"].append(Gi.tolist())
+                    grain_conflict_history[global_id[j]]["coordinates conflict"].append((pj))
+                    grain_conflict_history[global_id[j]]["gradient conflict"].append(Gj.tolist())
+
                 elif in_domain_i and not in_domain_j:
                     alive[j] = False
                     dendrite_lengths[j] = lamb_matrix_copy[j, i]
@@ -166,7 +198,7 @@ def resolve_growth_conflicts(
                     lambda_matrix[j, :] = np.nan
                     lambda_matrix[:, j] = np.nan
 
-    return dendrite_lengths, alive
+    return dendrite_lengths, alive, grain_conflict_history
 
 
 def _in_meltpool(y, z, thermal_layers: dict, layer_index: int, bd_increment:float, simulation_width:float, z_ultimate:float):
@@ -221,11 +253,11 @@ def resolve_batch_overlaps(data, batch_size, coords_all, ids_all, simulation_len
     boundaries = np.arange(0, simulation_length + batch_size, batch_size)
 
     for i, (x, gid) in enumerate(zip(x_all, ids_all)):
-        area = np.argmax(boundaries - x) - 1
+        area = np.argmax(boundaries - x > 0) - 1
         idx_local = np.where(data[area]['id'] == gid)[0]
         if idx_local.size == 0:
             continue
-        result_lengths[i] = data[area]['length dendrites'][idx_local[0]]
-        result_dirs[i] = data[area]['growth direction'][idx_local[0]]
+        result_lengths[i] = data[area]['length dendrites'][idx_local][0]
+        result_dirs[i] = data[area]['growth direction'][idx_local][0]
 
     return result_lengths, result_dirs

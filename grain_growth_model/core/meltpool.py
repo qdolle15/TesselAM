@@ -17,7 +17,7 @@ def ellipse_arc_length(x_axis, y_axis, theta_min, theta_max):
     """
     def integrand(theta, x_axis, y_axis):
         return np.sqrt((x_axis * np.sin(theta))**2 + (y_axis * np.cos(theta))**2)
-
+    
     length, _ = quad(integrand, theta_min, theta_max, args=(x_axis, y_axis))
     return length
 

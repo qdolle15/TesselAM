@@ -93,25 +93,26 @@ def initialize_interface_grains(
 
     current_depth = thermal_layers[layer_index]['height']
     current_width = thermal_layers[layer_index]['width']
-    theta_limit = np.arcsin(simulation_width / current_width)
+    theta_limit_inf = np.arccos(-simulation_width / current_width)
+    theta_limit_sup = np.arccos(simulation_width / current_width)
 
     if known_coords is None:
-        arc_length = ellipse_arc_length(current_width / 2, current_depth, -theta_limit, theta_limit)
+        arc_length = abs(ellipse_arc_length(current_width / 2, current_depth, theta_limit_inf, theta_limit_sup))
         interface_area = arc_length * simulation_length
         num_interface_grains = int(interface_area / mean_grain_diameter**2)
 
-        theta = np.random.uniform(-theta_limit, theta_limit, size=num_interface_grains)
+        theta = np.random.uniform(theta_limit_inf, theta_limit_sup, size=num_interface_grains)
         x_coords = np.random.uniform(0, simulation_length, num_interface_grains)
-        y_coords = y0 + (current_width / 2) * k_inside * np.sin(theta)
-        z_coords = z0 - current_depth * k_inside * np.cos(theta)
+        y_coords = y0 + (current_width / 2) * k_inside * np.cos(theta)
+        z_coords = z0 - current_depth * k_inside * np.sin(theta)
         orientations = np.random.uniform(-np.pi, np.pi, size=(num_interface_grains, 3))
 
-        z_low = z0 - current_depth * k_inside * np.cos(theta_limit)
+        z_low = z0 - current_depth * k_inside * np.sin(theta_limit_sup)
         if layer_index + 1 < len(thermal_layers):
             next_width = thermal_layers[layer_index + 1]['width']
             next_depth = thermal_layers[layer_index + 1]['height']
-            next_theta_limit = np.arcsin(simulation_width / next_width)
-            z_high = z0 + bd_increment - next_depth * k_inside * np.cos(next_theta_limit)
+            next_theta_limit = np.arccos(simulation_width / next_width)
+            z_high = z0 + bd_increment - next_depth * k_inside * np.sin(next_theta_limit)
         else:
             z_high = z_ultimate
 
@@ -139,12 +140,12 @@ def initialize_interface_grains(
         if layer_index + 1 < len(thermal_layers):
             next_width = thermal_layers[layer_index + 1]['width']
             next_depth = thermal_layers[layer_index + 1]['height']
-            next_theta_limit = np.arcsin(simulation_width / next_width)
-            z_high = z0 + bd_increment - next_depth * k_inside * np.cos(next_theta_limit)
+            next_theta_limit = np.arccos(simulation_width / next_width)
+            z_high = z0 + bd_increment - next_depth * k_inside * np.sin(next_theta_limit)
         else:
             z_high = z_ultimate
 
-        z_low = z0 - current_depth * k_inside * np.cos(theta_limit)
+        z_low = z0 - current_depth * k_inside * np.sin(theta_limit_sup)
         num_wall_grains = int((z_high - z_low) * simulation_length / mean_grain_diameter**2)
 
         x1 = np.random.uniform(0, simulation_length, num_wall_grains)

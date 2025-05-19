@@ -1,4 +1,5 @@
 import os
+import numpy as np
 from datetime import datetime
 
 
@@ -45,25 +46,44 @@ def initialize_output_directory(label=None, base_folder="outputs"):
     return paths
 
 
-def generate_report(data, output_file):
+def generate_report(data: dict, config_module, output_file: str):
     """
-    Generate a plain text report with global and per-layer statistics.
+    Generate a plain text report including global configuration and simulation statistics.
 
     Parameters
     ----------
     data : dict
-        Nested dictionary with numerical tracking information.
+        Nested dictionary with numerical tracking information (global and per-layer).
+    config_module : module
+        Configuration module used for the simulation (from load_config_module).
     output_file : str
         Path to the output text file.
     """
     with open(output_file, 'w') as f:
         f.write("# FAST-MMAM Simulation Report\n\n")
+
+        # Configuration summary
+        f.write("## Configuration Parameters\n")
+        config_keys = [
+            "LENGTH_SIMULATION", "WIDTH_SIMULATION", "D0", "D_seeds",
+            "BD_INCREMENTS", "Z_ULTIMATE", "START_SIMULATION",
+        ]
+        for key in config_keys:
+            value = getattr(config_module, key, "N/A")
+            f.write(f"{key:<25}: {value}\n")
+
+        # Extra fields (thermal layers, EGD family)
+        f.write(f"\nTHERMAL_HISTORY (n layers): {len(config_module.THERMAL_HISTORY)}\n")
+        f.write(f"EGD_FAMILY shape            : {getattr(config_module, 'EGD_FAMILY', np.array([])).shape}\n")
+        f.write(f"DOMAINS defined             : {len(getattr(config_module, 'DOMAINS', []))}\n")
+        f.write(f"CUT_VIEWS                   : {getattr(config_module, 'CUT_VIEWS', [])}\n")
+
+        f.write("\n## Simulation Summary\n")
         for key, val in data.items():
             if isinstance(val, dict):
-                f.write(f"--- Layer {key} ---\n")
+                f.write(f"\n--- Layer {key} ---\n")
                 for subkey, subval in val.items():
                     f.write(f"{subkey:<30}: {subval}\n")
-                f.write("\n")
             else:
                 f.write(f"{key:<30}: {val}\n")
 

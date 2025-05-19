@@ -85,7 +85,7 @@ def plot_thermal_history_cross_section(
     plt.close()
 
 
-def show_domains(thermal_history, working_dir, save, domain, cut_view):
+def show_domains(thermal_history, simulation_length, simulation_width, bd_increment, z_ultimate, working_dir, save, domain, cut_view):
     """
     Show visual cuts (e.g., XZ, YZ) of meltpool and domain of interest.
 
@@ -98,47 +98,95 @@ def show_domains(thermal_history, working_dir, save, domain, cut_view):
         Keys: x_min, x_max, y_min, y_max, z_min, z_max
     cut_view : list of (str, float)
     """
-    fig, ax = plt.subplots(figsize=(6, 4))
 
-    for view, value in cut_view:
-        for idx, layer in thermal_history.items():
-            zc = idx * thermal_history[0]["height"]
-            height = layer["height"]
-            width = layer["width"]
-            length = layer["length"]
+    YMAX = (len(thermal_history) - 1) * bd_increment + thermal_history[0]['height']
+    YLIM = [i * bd_increment + thermal_history[0]['height'] for i in range(len(thermal_history))]
+    YLIM.insert(0, 0)
+    colors = mcolors.BASE_COLORS
+    col_keys = list(colors.keys())
+    z_source = thermal_history[0]['height']
+    ypos = np.linspace(-simulation_width / 2, simulation_width / 2, 5000, endpoint=True)
+    zsubstrat = z_source - thermal_history[0]['height'] * np.sqrt(1 - (2 * ypos / thermal_history[0]['width']) ** 2)
 
-            theta = np.linspace(0, 2 * np.pi, 200)
+    # Création des subplots pour la vue de face et la vue de côté
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6), sharey=True)
+    plt.subplots_adjust(wspace=0)
 
-            if view.upper() == "XZ":
-                x = (length / 2) * np.cos(theta)
-                z = zc - height * np.sin(theta)
-                ax.plot(x, z, label=f"Layer {idx}")
-                ax.set_xlabel("x")
-                ax.set_ylabel("z")
+    # Substrat
+    ax1.fill_between(ypos, 0, zsubstrat, color='black', alpha=0.5)  
+    
+    for layer in range(len(thermal_history)):
+        col = colors[col_keys[layer % len(thermal_history)]]
+        w = thermal_history[layer]['width']
+        d = thermal_history[layer]['height']
+        zpos = z_source - d * np.sqrt(1 - (2 * ypos / w) ** 2)
+        z_source += bd_increment
 
-            elif view.upper() == "YZ":
-                y = (width / 2) * np.cos(theta)
-                z = zc - height * np.sin(theta)
-                ax.plot(y, z, label=f"Layer {idx}")
-                ax.set_xlabel("y")
-                ax.set_ylabel("z")
+        ax1.scatter(0, layer * bd_increment + thermal_history[0]['height'], color=col)
+        ax1.plot(ypos, zpos, c=col)
 
-            elif view.upper() == "XY":
-                x = (length / 2) * np.cos(theta)
-                y = (width / 2) * np.sin(theta)
-                ax.plot(x, y, label=f"Layer {idx}")
-                ax.set_xlabel("x")
-                ax.set_ylabel("y")
+        ax2.hlines(y=layer * bd_increment + thermal_history[0]['height'], xmin=0, xmax=LENGTH_SIMULATION, color='k')
+        # ax2.scatter(LENGTH_SIMULATION/2, layer * BD_INCREMENTS + thermal_history[0]['height'], color=col)
+        ax2.hlines(y=np.min(zpos), xmin=0, xmax=simulation_length, color=col)
+        ax2.hlines(y=np.max(zpos), xmin=0, xmax=simulation_length, color=col)
+        ax2.fill_between([0, simulation_length], np.min(zpos), np.max(zpos), color=col, alpha=0.2)
+        
+    # Bordures largeur 
+    ax1.vlines(x=[-simulation_width / 2, simulation_width / 2], ymin=0, ymax=YMAX, color='k')    
+    ax1.hlines(y=YLIM, xmin=-simulation_width / 2, xmax=simulation_width / 2, color='k')
+    ax1.hlines(y=z_ultimate, xmin=-simulation_width / 2, xmax=simulation_width / 2, color='k', ls='--')
+    # Plan de coupe
+    ax1.vlines(x=0, ymin=-0.05, ymax=YMAX+0.05, color='silver', ls='dashdot')
 
-    ax.set_title(f"{view} Section — Domain")
-    ax.axis("equal")
-    ax.legend()
+    ax1.set_ylim(-0.05, YMAX + 0.05)
+    ax1.set_aspect('equal', adjustable='box')
+    ax1.set_xlabel('Y axis')
+    ax1.set_ylabel('Z axis')
+    ax1.set_title('Front View')
+    ax1.set_aspect('equal', adjustable='box')
+
+    ax2.set_ylim(-0.05, YMAX + 0.05)
+    ax2.vlines(x=[0, simulation_length], ymin=0, ymax=YMAX, color='k')
+    ax2.hlines(y=z_ultimate, xmin=0, xmax=simulation_length, color='k', ls='--')
+    # ax2.vlines(x=LENGTH_SIMULATION/2, ymin=-0.05, ymax=YMAX+0.05, color='k', ls='dotted')
+    ax2.set_xlabel('X axis')
+    ax2.set_ylabel('Z axis')
+    ax2.set_title('Side View')
+
+    # Domaine
+    xmax = domain['x_max']
+    xmin = domain['x_min']
+    ymax = domain['y_max']
+    ymin = domain['y_min']
+    zmax = domain['z_max']
+    zmin = domain['z_min']
+    color_domain='black'
+    ax1.hlines(y=[zmin, zmax], xmin=ymin, xmax=ymax, color=color_domain)
+    ax1.vlines(x=[ymin, ymax], ymin=zmin, ymax=zmax, color=color_domain)
+    ax2.hlines(y=[zmin, zmax], xmin=xmin, xmax=xmax, color=color_domain)
+    ax2.vlines(x=[xmin, xmax], ymin=zmin, ymax=zmax, color=color_domain)
+
+    # Plans de coupe
+    color_cut='black'
+    for plane, position in cut_view:
+        if plane == 'XZ':
+            y_cut = ymin + position * (ymax - ymin)
+            ax1.vlines(x=y_cut, ymin=zmin, ymax=zmax, color=color_cut, ls='dashdot', lw=1.5)
+        elif plane == 'YZ':
+            x_cut = xmin + position * (xmax - xmin)
+            ax2.vlines(x=x_cut, ymin=zmin, ymax=zmax, color=color_cut, ls='dashdot', lw=1.5)
+        elif plane == 'XY':
+            z_cut = zmin + position * (zmax - zmin)
+            ax1.hlines(y=z_cut, xmin=ymin, xmax=ymax, color=color_cut, ls='dashdot', lw=1.5)
+            ax2.hlines(y=z_cut, xmin=xmin, xmax=xmax, color=color_cut, ls='dashdot', lw=1.5)
+
+    # Sauvegarde ou affichage des graphiques
+    plt.tight_layout()
     if save:
-        os.makedirs(working_dir, exist_ok=True)
-        plt.savefig(f"{working_dir}/domain_{view}.png", dpi=300)
+        plt.savefig(f'{working_dir}/domain_selection.png')
     else:
         plt.show()
-    plt.close()
+    plt.close(fig)
 
 
 def visualize_growth_vectors_2D(positions, directions, title="Growth directions", save_path=None, scale=0.03):

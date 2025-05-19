@@ -17,6 +17,7 @@ class ConfigProtocol(Protocol):
     EGD_FAMILY: np.ndarray
     DOMAINS: list
     CUT_VIEWS: list
+    START: bool
 
 def validate_config_module(config_module, required_fields=None):
     """
@@ -47,6 +48,7 @@ def validate_config_module(config_module, required_fields=None):
             "EGD_FAMILY",
             "DOMAINS",
             "CUT_VIEWS",
+            "START",
         ]
 
     missing = [field for field in required_fields if not hasattr(config_module, field)]
