@@ -1,102 +1,120 @@
 # Grain Growth Model
 
-This repository contains a modular and extensible computational framework for a fast simulation of competitive grain growth during directional solidification, particularly in additive manufacturing (AM) or weld-like melt pools. The framework proposed does not intended to replace existing models but proposes a new approach based on statistical description of the on-going microstructure for monitoring purposes.
+**FAST-MMAM** stands for **Fast Simulation Model for Metallic Microstructure in Additive Manufacturing**. 
 
+It is a modular, extensible Python framework for simulating **competitive grain growth** during **directional solidification** such as in **additive manufacturing (AM)** or **welding**. The objective is to deliver **physically motivated**, **statistically meaningful**, and **visualization-ready** predictions of microstructural evolution, while maintaining **computational efficiency**.
+
+This framework is not intended to replace existing models such as **Phase-Field** or **Cellular Automaton** approaches. Instead, **FAST-MMAM** offers a complementary perspective by leveraging **upscaled physical observations** to enable **faster** and **less resource-intensive simulations**, particularly suitable for **in situ microstructure monitoring** and rapid design exploration.
 ---
 
 ## Features
 
-- 3D melt pool geometry modeled as layered ellipsoids  
-- Grain initialization in the substrate and interface
-- Crystal's easy growth direction for dendritic growth stage
-- Epitaxial and Columnar-to-Equiaxe Transition (CET) growth handling  
-- Competitive growth based on the favorable dendrite orientation according to local thermal gradient  
-- Batch processing for memory-efficient computation  
-- Post-processing and visualization-ready outputs  
+- **3D melt pool modeling** with quarter of ellipsoid, layer by layer.
+
+- **Microstructure as tessellation**: the domain is filled with small elements called *seeds*, each representing a portion of a grain.
+  - Each *seed* is defined by **7 degrees of freedom**: 3 coordinates (position), 3 orientation angles (crystallographic), and 1 grain index.
+  - *Seeds* belonging to the same grain share the same orientation and index.
+
+- **Grain construction**:
+  - *Seeds* are iteratively positioned along the **thermal gradient direction**, starting from an initial position.
+  - Growth proceeds as long as the **life expectancy** of the grain permits it (defined by competitive interactions).
+
+- **Two directions of growth** are considered:
+  - **Dendrite growth**: along the dendrite’s *easy growth direction* (EGD), intrinsic to its crystallographic orientation.
+  - **Grain growth**: driven by the local thermal gradient field.
+
+- **Two growth stages** are modeled:
+  1. **Competitive growth stage**:
+     - All dendrites grow simultaneously along their EGD.
+     - Potential conflicts are detected as **minimal distances between dendrite trajectories** below a user-defined threshold.
+     - The **Walton & Chalmers criterion** is used: the dendrite most aligned with the thermal gradient wins the competition and continues to grow.
+     - The segment up to the lost conflict defines the **maximum extent (life)** of each grain.
+  2. **Grain growth stage**:
+     - Grains grow iteratively along the thermal gradient until their life expectancy is reached.
+
+- **Epitaxial growth & CET (Columnar-to-Equiaxed Transition)**:
+  - Controlled via configuration (e.g. thermal profile & Hunt criterion).
+  - If CET is True: a new interface is initialized with randomly oriented grains.
+  - If CET is False: grains that reach the meltpool top can regrow in the next layer.
+
+- **Batch-based conflict resolution**:
+  - To handle large NxN combinations in the competitive stage, the domain is sliced along its length and treated **batch by batch** to reduce memory usage.
+
+- **Post-processing**:
+  - Automatic export of **coordinates**, **orientations**, and **grain indices** for each layer and interface.
+
+- **EBSD-like visualization**:
+  - Generation of 2D cross-sections colored by crystallographic orientation using **Neper** and **ORIX**.
 
 ---
 
 ## Project Structure
 
 ```text
-FAST-MMAM/|
-├── configs/
-│   ├── config_high_gradient.py
-│   ├── config_low_width.py
-│   └── config_epitaxy_off.py
+FAST-MMAM/
+|
+├── configs/                             # Configuration scripts for multiple simulations (Respect name and format of this file)
+│   ├── config_1.py
+│   ├── config_2.py
+│   └── ...                       
 |
 ├── grain_growth_model/
 │   ├── __init__.py
-│   ├── core/     
-│   │   ├── __init__.py     
-│   │   ├── meltpool.py                  # Melt pool geometry, gradients, ...
-│   │   ├── grains.py                    # Substrate and interface grain generation (reinforced version)
-│   │   ├── growth.py                    # Growth direction computation and grain growth algorithm
-│   │   ├── competition.py               # Conflict resolution and batch management
-│   │   ├── geometry.py                  # General geometric utilities (ellipse arc, line intersections, ...)
-│   ├── analysis/     
-│   │   ├── __init__.py     
-│   │   ├── statistics_classic.py                # Basic statistics for data distribution (checking)
-│   │   ├── statistics_moments.py                # Advanced moment statistics for microstructure description
-│   └── utils/     
-│       ├── __init__.py     
-│       ├── io.py                        # File I/O + output directory creation, reporting
-│       └── visualization.py             # Visualization tools for melt pool, domains, growth directions
+│   ├── core/                            # Main algorithms and meltpool geometry
+│   ├── analysis/                        # Statistical post-processing
+│   ├── neper/                           # Tessellation-based EBSD visualization
+│   └── utils/                           # I/O, visualization tools, configuration checks
 |
 ├── outputs/                             # <--- permanent output folder
-│   └── config_high_gradient_YYYYMMDD_HHMMSS/      # (example)
-│       ├── coordinates/
-│       ├── orientations/
-│       ├── index/
-│       ├── meltpool_profiles.png
-│       ├── ___report_simulation.txt
-│       ├── ___report_visualization.txt
-│       └── domaine_1/
-│           └── domain_XZ.png
+│   └── name_configuration_file_XXXXX/
+│       ├── data/
+│       ├── report/
+│       └── results/
 |
 ├── main.py                               # Main simulation driver script (root level)
-├── requirements.txt
-├── setup.py
+├── requirements.txt                      # List of dependencies
+├── setup.py                              # Installable package
 └── README.md
 
 ```
 
 ## Quick Start
-1 - Install dependencies (you can use conda, venv, or pip):
+
+### 1. Install dependencies
+You can use `pip` with a virtual environment:
 ```bash
-pip install numpy scipy tqdm matplotlib
+pip install -r requirements.txt
 ```
 
-2 - Configure the simulation in config.py:
-* Simulation dimensions
-* Melt pool layers
+### 2. Configure your simulation
+Edit or duplicate any file in configs/. Each config defines:
+* Simulation domain size
+* Meltpool thermal profiles (length, width, depth)
 * Growth thresholds
 * Crystallographic directions
 
-3 - Run the simulation:
+
+### 3. Run the model
 ```bash
-python main.py
+python main.py configs/{name_of_the_python_configuration_file}.py
 ```
 
-4 - Visualize results (optional):
-* Results are saved in folders like coordinates/, orientations/, indexes/ ...
-* Use utils/visualization.py or external tools like ParaView
+### 4. Visualize your results
+results saved in 'outputs/name_configuration_file_XXXXX/' containing:
+* Report of the simulation
+* Report of the visualization part
+* sub repositories for each domain with the EBSD like images / IPF triangles / PF
 
 ## Dependencies
-* numpy — numerical computing
-* scipy — ellipse arc lengths & integration
-* tqdm — progress bars
-* matplotlib — plotting (optional)
+| Library     | Use                         |
+|-------------|-----------------------------|
+| `numpy`     | Arrays, math                |
+| `scipy`     | Integration, geometry       |
+| `matplotlib`| Plotting                    |
+| `tqdm`      | Progress bars               |
+| `orix`      | Crystal orientation handling (IPF, PF) |
+| `neper`     | 3D tessellation visualization (external, see below) |
 
-
-## Neper installation
-Neper is used for result visualization. The seeds and the orientations feed the tessellation algorithm neper and provide EBSD like data. Neper could be installed following the instructions in this link.
-https://neper.info/doc/tutorials/install_ubuntu22.html#installation-ubuntu-22
-
-## Notes
-* Meltpool shape is modeled layer-by-layer using ellipsoidal equations
-* Growth stops at the next interface or top surface
-* Grain directions are selected based on alignment with local thermal gradient and crystallographic constraints
 
 ## Install / Uninstall
 * Execute the following command line at the level of setup.py
@@ -112,8 +130,24 @@ pip uninstall FAST-MMAM
 pip list | grep FAST
 ```
 
-## License
+## EBSD-like Visualization
+**Neper** is required to generate grain tessellations.
+
+Official install guide for ubuntu:  
+https://neper.info/doc/tutorials/install_ubuntu22.html#installation-ubuntu-22
+
+Once installed, FAST-MMAM will:
+- extract seeds in a subdomain of the simulation domain
+- run a 3D raster tessellation with Neper
+- Reconstruct a 3D arrays in python with id of the voxels corresponding to grain id
+- Get the IPF color associated to the Euler-Bunges angles thanks to 'Orix'
+- extract 2D planes
+- visualize orientations using matplotlib
+
+## License / Citation
 Distributed for academic use. Please cite the author or related publication if used in a research project.
+DOI of the associated publication: https://doi.org/10.1016/j.commatsci.2024.113112
 
 ## Author
 Developed by Quentin Dollé. For questions or contributions, open an issue or contact me directly.
+mel: quentin.dolle@polytechnique.edu  
