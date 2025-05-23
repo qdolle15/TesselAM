@@ -10,14 +10,14 @@ class ConfigProtocol(Protocol):
     D_seeds: float
     THRESHOLD: float
     NOISE_NEPER: float
-    SUBSTRATE_BBOX_EXCESS: float
     BD_INCREMENTS: float
     Z_ULTIMATE: float
     THERMAL_HISTORY: dict
     EGD_FAMILY: np.ndarray
-    DOMAINS: list
     CUT_VIEWS: list
     START: bool
+    RANDOM_SEED: int
+
 
 def validate_config_module(config_module, required_fields=None):
     """
@@ -41,14 +41,13 @@ def validate_config_module(config_module, required_fields=None):
             "D_seeds",
             "THRESHOLD",
             "NOISE_NEPER",
-            "SUBSTRATE_BBOX_EXCESS",
             "BD_INCREMENTS",
             "Z_ULTIMATE",
             "THERMAL_HISTORY",
             "EGD_FAMILY",
-            "DOMAINS",
             "CUT_VIEWS",
             "START",
+            "RANDOM_SEED"
         ]
 
     missing = [field for field in required_fields if not hasattr(config_module, field)]
@@ -57,3 +56,26 @@ def validate_config_module(config_module, required_fields=None):
         raise AttributeError(f"Config file is missing required fields: {missing}")
     else:
         print("Configuration file validated successfully.")
+
+
+def max_array_size_from_bytes(max_bytes: int, dtype=np.float32) -> int:
+    """
+    Compute the maximum dimension N for an N x N array of a given dtype
+    that fits within a byte size limit.
+
+    Parameters
+    ----------
+    max_bytes : int
+        Maximum allowed memory size in bytes.
+    dtype : np.dtype
+        NumPy data type (default: np.float32).
+
+    Returns
+    -------
+    int
+        Maximum allowed value of N for an (N x N) array.
+    """
+    bytes_per_element = np.dtype(dtype).itemsize
+    max_elements = max_bytes // bytes_per_element
+    max_side_length = int(np.floor(np.sqrt(max_elements)))
+    return max_side_length

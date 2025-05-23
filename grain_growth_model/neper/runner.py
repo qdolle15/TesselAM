@@ -1,59 +1,100 @@
 import numpy as np
 
-from grain_growth_model.neper.tools import create_sub_selection, read_data, transform_data
-from grain_growth_model.neper.cmd import create_tessellation
+from grain_growth_model.neper.neper_tools import create_sub_selection, read_data, transform_data
+from grain_growth_model.neper.neper_command import create_tessellation
 from grain_growth_model.neper.neper_visualization import (
     extract_and_plot_slice, color_IPF,
     image_cross_section, image_IPF_triangle, pole_figure
 )
 
-def EBSD_like(domain: dict, cut_view: dict, save: bool, working_dir: str, global_dir: str):
+def EBSD_like(No_layer:int, domain: dict, cut_view: list, save: bool, data_path_dir: str, domain_path_dir: str) -> dict:
     """
     Generate EBSD-like maps and pole figures using Neper tessellation.
 
     Parameters
     ----------
-    domain : dict
-        Domain bounding box with keys x_min, x_max, y_min, y_max, z_min, z_max.
-    cut_view : dict
-        Dictionary of plane:position (e.g. {'YZ': 0.5}) to cut for EBSD-like maps.
-    save : bool
-        If True, save all generated images.
-    working_dir : str
-        Directory to save intermediate and final results.
-    global_dir : str
-        Directory where global simulation data is stored.
+        No_layer (int): Number of layers to consider in the simulation (including substrate).
+        domain (dict): Spatial domain to crop, with keys: x_min, x_max, y_min, y_max, z_min, z_max.
+        cut_view (list of tuple): List of planes and relative positions (e.g., [("YZ", 0.5), ("XZ", 0.25)]).
+        save (bool) Whether to save images (True) or display them (False).
+        data_path_dir (str) Path to full simulation output files (for sub-selection).
+        domain_path_dir (str): Output path for saving EBSD-like visualizations.
 
     Returns
     -------
-    dict
-        Information about tessellation (voxels, command, seeds, time, etc.).
+        (dict) Dictionary containing tessellation information and statistics.
     """
-    N, grains_per_layers = create_sub_selection(domain, working_dir, global_dir)
-    cmd, voxels, time_tess = create_tessellation(N, domain, working_dir)
 
-    angles = np.loadtxt(f'{working_dir}/sub_ori.txt', delimiter=' ')
-    tesr_raw = read_data(f'{working_dir}/tessellation_3d.tesr')
+    # Crop seeds in domain
+    No_seeds, grains_per_layers = create_sub_selection(
+        No_layer=No_layer,
+        domain=domain,
+        data_path=data_path_dir,
+        domain_path_dir=domain_path_dir
+    )
+    # Create Neper tessellation of this sub-domain
+    cmd, voxels, time_tess = create_tessellation(
+        nbr_seeds=No_seeds,
+        domain=domain,
+        domain_path_dir=domain_path_dir
+    )
+
+    # Load crystal orientations
+    angles = np.loadtxt(f'{domain_path_dir}/sub_ori.txt', delimiter=' ')
+
+    # Load 3D tessellation
+    tesr_raw = read_data(f'{domain_path_dir}/tessellation_3d.tesr')
     tesr_flatten = transform_data(tesr_raw)
-    tesr_3d = np.transpose(tesr_flatten.reshape((voxels[2], voxels[1], voxels[0])), (0, 1, 2))
+    tesr_3d = np.transpose(
+        tesr_flatten.reshape((voxels[2], voxels[1], voxels[0])),
+        (0, 1, 2)
+    )
+    # The grain is made up of voxels, each voxel with the identifier of the grain to which it belongs. \
+    # This identifier corresponds to the line in the 'sub_ori.txt' file.
 
-    for plane, position in cut_view.items():
+    # Loop over requested 2D views
+    for plane, position in cut_view:
         direction = "z"
-        suf = str(position).replace('.', 'o')
-        tesr_cut_2d = extract_and_plot_slice(tesr_3d, plane=plane, position=position)
+        suf = f"{int(position * 100):03d}"
+
+        # Cut the 3D tessellation
+        tesr_cut_2d = extract_and_plot_slice(
+            arr=tesr_3d,
+            plane=plane,
+            position=position
+        )
         cut_angles_flatten = angles[tesr_cut_2d.ravel() - 1]
 
-        colors = color_IPF(flatten_ori=cut_angles_flatten, direction=direction, plane_dimension=tesr_cut_2d.shape)
-
-        image_cross_section(colors, save, f'{working_dir}/EBSD_{direction}_{plane}_{suf}.pdf')
-        image_IPF_triangle(cut_angles_flatten, save, direction, f'{working_dir}/IPF_{direction}_triangle_{plane}_{suf}.pdf')
-        pole_figure(cut_angles_flatten, f'{working_dir}/PF_{direction}_{plane}_{suf}.pdf', save)
+        # Color the section with IPF coloring
+        array_EBSD_like_colored = color_IPF(
+            flatten_ori=cut_angles_flatten,
+            direction=direction,
+            plane_dimension=tesr_cut_2d.shape
+        )
+        
+        # Save or show results
+        image_cross_section(
+            arr=array_EBSD_like_colored,
+            save=save,
+            path_save=f'{domain_path_dir}/EBSD_{direction}_{plane}_{suf}.png'
+        )
+        image_IPF_triangle(
+            flatten_ori=cut_angles_flatten,
+            direction=direction,
+            save=save,
+            path_save=f'{domain_path_dir}/IPF_{direction}_triangle_{plane}_{suf}.png'
+        )
+        pole_figure(
+            flatten_ori=cut_angles_flatten,
+            save=save,
+            path_save=f'{domain_path_dir}/PF_{direction}_{plane}_{suf}.png'
+        )
 
     return {
         'voxels': voxels,
-        'N': N,
+        'N': No_seeds,
         'cmd': cmd,
-        'work_path': working_dir,
+        'work_path': domain_path_dir,
         'time_tess': time_tess,
         'grains_per_layers': grains_per_layers
     }

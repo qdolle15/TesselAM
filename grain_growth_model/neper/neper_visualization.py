@@ -1,11 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from orix.orientation import Orientation
+from orix.quaternion import Orientation, symmetry
 from orix.vector import Vector3d
-from orix.symmetry import symmetry
-from orix.plot import plot
+from orix.plot import IPFColorKeyTSL
 from orix.crystal_map import Phase
-from orix.hkl import Miller
+from orix.vector import Miller
 
 
 def extract_and_plot_slice(arr: np.ndarray, plane: str, position: float) -> np.ndarray:
@@ -62,8 +61,8 @@ def color_IPF(flatten_ori: np.ndarray, direction: str, plane_dimension: tuple) -
     assert direction in ("x", "y", "z"), "Direction must be 'x', 'y', or 'z'."
     v = {"x": Vector3d([1, 0, 0]), "y": Vector3d([0, 1, 0]), "z": Vector3d([0, 0, 1])}[direction]
 
-    ori = Orientation.from_euler(flatten_ori, degrees=True)
-    ipfkey = plot.IPFColorKeyTSL(symmetry.Oh, direction=v)
+    ori = Orientation.from_euler(flatten_ori, degrees=False)
+    ipfkey = IPFColorKeyTSL(symmetry.Oh, direction=v)
     ori.symmetry = ipfkey.symmetry
     rgb = ipfkey.orientation2color(ori)
     return rgb.reshape((plane_dimension[0], plane_dimension[1], 3))
@@ -112,8 +111,8 @@ def image_IPF_triangle(flatten_ori: np.ndarray, direction: str, save: bool, path
     assert direction in ("x", "y", "z"), "Direction must be 'x', 'y', or 'z'."
     v = {"x": Vector3d([1, 0, 0]), "y": Vector3d([0, 1, 0]), "z": Vector3d([0, 0, 1])}[direction]
 
-    ori = Orientation.from_euler(flatten_ori, degrees=True)
-    ipfkey = plot.IPFColorKeyTSL(symmetry.Oh, direction=v)
+    ori = Orientation.from_euler(flatten_ori, degrees=False)
+    ipfkey = IPFColorKeyTSL(symmetry.Oh, direction=v)
     ori.symmetry = ipfkey.symmetry
     rgb = ipfkey.orientation2color(ori)
 
@@ -138,12 +137,12 @@ def pole_figure(flatten_ori: np.ndarray, path_save: str, save: bool):
     save : bool
         If True, saves the figure.
     """
-    ori = Orientation.from_euler(flatten_ori, degrees=True, symmetry=symmetry.Oh)
+    ori = Orientation.from_euler(flatten_ori, degrees=False, symmetry=symmetry.Oh)
 
     phase = Phase(point_group="m-3m")
-    t_100 = Miller([1, 0, 0], phase).symmetrise(unique=True)
-    t_101 = Miller([1, 0, 1], phase).symmetrise(unique=True)
-    t_111 = Miller([1, 1, 1], phase).symmetrise(unique=True)
+    t_100 = Miller(xyz=[1, 0, 0], phase=phase).symmetrise(unique=True)
+    t_101 = Miller(xyz=[1, 0, 1], phase=phase).symmetrise(unique=True)
+    t_111 = Miller(xyz=[1, 1, 1], phase=phase).symmetrise(unique=True)
 
     v100 = ori.inv().outer(t_100)
     v101 = ori.inv().outer(t_101)

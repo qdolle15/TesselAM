@@ -1,11 +1,7 @@
-# grain_growth_model/neper/tessellation.py
-
 import os
-import re
 import time
-import numpy as np
 
-def create_tessellation(nbr_seeds: int, domain: dict, working_dir: str):
+def create_tessellation(nbr_seeds: int, domain: dict, domain_path_dir: str):
     """
     Run Neper to create a raster tessellation from filtered seeds.
     """
@@ -22,8 +18,8 @@ def create_tessellation(nbr_seeds: int, domain: dict, working_dir: str):
         f"neper -T -dim 3 -n {nbr_seeds} "
         f"-domain 'cube({x_dom},{y_dom},{z_dom})' "
         f"-morpho 'voronoi' "
-        f"-morphooptiini 'coo:file(./{working_dir}/sub_coo.txt)' "
-        f"-ori 'file(./{working_dir}/sub_ori.txt)' "
+        f"-morphooptiini 'coo:file(./{domain_path_dir}/sub_coo.txt)' "
+        f"-ori 'file(./{domain_path_dir}/sub_ori.txt)' "
         f"-format 'tesr' -tesrformat 'ascii' "
         f"-tesrsize '{tesr_X}:{tesr_Y}:{tesr_Z}' "
         f"-o tessellation_3d"
@@ -31,8 +27,8 @@ def create_tessellation(nbr_seeds: int, domain: dict, working_dir: str):
 
     start = time.time()
     os.system(command)
-    os.system(f"mv tessellation_3d.* {working_dir}")
     elapsed = time.time() - start
-
+    os.system(f"mv tessellation_3d.* {domain_path_dir}")
+    
     return command, (tesr_X, tesr_Y, tesr_Z), elapsed
 

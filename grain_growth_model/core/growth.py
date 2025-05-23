@@ -94,7 +94,7 @@ def simulate_grain_growth(
     inter_seeds_distance:float,
     layer_index: int,
     noise_neper:float,
-    output_folder: str
+    saving_path: str
 ):
     """
     Simulate the growth of all grains in the current layer using their preferred direction.
@@ -114,13 +114,14 @@ def simulate_grain_growth(
         inter_seeds_distance (float): distance between two consecutive seeds
         layer_index (int): Index of the current layer.
         noise_neper (float): Noise for tesselation construction (Neper)
-        output_folder (str): Output path for coordinate, orientation, and ID saving.
+        saving_path (str): Output path for coordinate, orientation, and ID saving.
 
     Returns
     -------
         (int): Number of grains that reached the top of the simulation domain.
     """
 
+    new_seeds = 0
     reach_top = 0
     is_last = layer_index == (len(thermal_layers) - 1)
     threshold = 1e-3
@@ -148,6 +149,7 @@ def simulate_grain_growth(
             coords_all.append([xn, yn, zn])
             oris_all.append([o1, o2, o3])
             ids_all.append(g_id)
+            new_seeds+=1
 
             # Growth step
             cos_theta = np.clip(abs(grad[0]), threshold, None)  # Low threshold to help worst oriented grains starting growing
@@ -215,17 +217,17 @@ def simulate_grain_growth(
 
     # Saving as npz
     np.savez(
-        join(output_folder, f"data_layers/interface_{layer_index}.npz"),
+        join(saving_path, f"layer_{layer_index}.npz"),
         coords=np.array(coords_all),
         oris=np.array(oris_all),
         indexes=np.array(ids_all)
     )
 
     np.savez(
-        join(output_folder, f"data_layers/interface_{layer_index}_{layer_index+1}.npz"),
+        join(saving_path, f"interface_{layer_index}_{layer_index+1}.npz"),
         coords=np.array(coords_top),
         oris=np.array(oris_top),
         indexes=np.array(ids_top)
     )
 
-    return reach_top
+    return reach_top, new_seeds

@@ -89,6 +89,10 @@ python main.py
 * matplotlib — plotting (optional)
 
 
+## Neper installation
+Neper is used for result visualization. The seeds and the orientations feed the tessellation algorithm neper and provide EBSD like data. Neper could be installed following the instructions in this link.
+https://neper.info/doc/tutorials/install_ubuntu22.html#installation-ubuntu-22
+
 ## Notes
 * Meltpool shape is modeled layer-by-layer using ellipsoidal equations
 * Growth stops at the next interface or top surface

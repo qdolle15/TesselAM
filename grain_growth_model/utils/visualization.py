@@ -85,14 +85,14 @@ def plot_thermal_history_cross_section(
     plt.close()
 
 
-def show_domains(thermal_history, simulation_length, simulation_width, bd_increment, z_ultimate, working_dir, save, domain, cut_view):
+def show_domains(thermal_history, simulation_length, simulation_width, bd_increment, z_ultimate, domain_path_dir, save, domain, cut_view):
     """
     Show visual cuts (e.g., XZ, YZ) of meltpool and domain of interest.
 
     Parameters
     ----------
     thermal_history : dict
-    working_dir : str
+    domain_path_dir : str
     save : bool
     domain : dict
         Keys: x_min, x_max, y_min, y_max, z_min, z_max
@@ -125,7 +125,7 @@ def show_domains(thermal_history, simulation_length, simulation_width, bd_increm
         ax1.scatter(0, layer * bd_increment + thermal_history[0]['height'], color=col)
         ax1.plot(ypos, zpos, c=col)
 
-        ax2.hlines(y=layer * bd_increment + thermal_history[0]['height'], xmin=0, xmax=LENGTH_SIMULATION, color='k')
+        ax2.hlines(y=layer * bd_increment + thermal_history[0]['height'], xmin=0, xmax=simulation_length, color='k')
         # ax2.scatter(LENGTH_SIMULATION/2, layer * BD_INCREMENTS + thermal_history[0]['height'], color=col)
         ax2.hlines(y=np.min(zpos), xmin=0, xmax=simulation_length, color=col)
         ax2.hlines(y=np.max(zpos), xmin=0, xmax=simulation_length, color=col)
@@ -160,14 +160,14 @@ def show_domains(thermal_history, simulation_length, simulation_width, bd_increm
     ymin = domain['y_min']
     zmax = domain['z_max']
     zmin = domain['z_min']
-    color_domain='black'
+    color_domain='chartreuse'
     ax1.hlines(y=[zmin, zmax], xmin=ymin, xmax=ymax, color=color_domain)
     ax1.vlines(x=[ymin, ymax], ymin=zmin, ymax=zmax, color=color_domain)
     ax2.hlines(y=[zmin, zmax], xmin=xmin, xmax=xmax, color=color_domain)
     ax2.vlines(x=[xmin, xmax], ymin=zmin, ymax=zmax, color=color_domain)
 
     # Plans de coupe
-    color_cut='black'
+    color_cut='chartreuse'
     for plane, position in cut_view:
         if plane == 'XZ':
             y_cut = ymin + position * (ymax - ymin)
@@ -183,7 +183,7 @@ def show_domains(thermal_history, simulation_length, simulation_width, bd_increm
     # Sauvegarde ou affichage des graphiques
     plt.tight_layout()
     if save:
-        plt.savefig(f'{working_dir}/domain_selection.png')
+        plt.savefig(f'{domain_path_dir}/domain_selection.png')
     else:
         plt.show()
     plt.close(fig)

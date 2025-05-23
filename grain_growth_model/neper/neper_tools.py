@@ -2,7 +2,7 @@ import os
 import re
 import numpy as np
 
-def create_sub_selection(domain: dict, data_path: str, save_path: str):
+def create_sub_selection(No_layer:int, domain: dict, data_path: str, domain_path_dir: str):
     """
     Filter all seeds to keep only those inside the analysis domain.
 
@@ -11,22 +11,22 @@ def create_sub_selection(domain: dict, data_path: str, save_path: str):
     int : Total number of filtered seeds
     np.ndarray : Grain count per layer
     """
-    coo_filename = f"{save_path}/sub_coo.txt"
-    ori_filename = f"{save_path}/sub_ori.txt"
-    id_filename = f"{save_path}/sub_id.txt"
+    coo_filename = f"{domain_path_dir}/sub_coo.txt"
+    ori_filename = f"{domain_path_dir}/sub_ori.txt"
+    id_filename = f"{domain_path_dir}/sub_id.txt"
 
     grains_per_layers = []
     N_seeds = 0
 
     with open(coo_filename, 'w') as final_coo, open(ori_filename, 'w') as final_ori, open(id_filename, 'w') as final_id:
-        for lay in np.arange(-1, len(domain["thermal_activity"])):
+        for lay in np.arange(-1, No_layer):
             if lay == -1:
-                substrate_data = np.load(os.path.join(data_path["data_layers"], f"substrate.npz"))
+                substrate_data = np.load(os.path.join(data_path, f"substrate.npz"))
                 coo = substrate_data['coords']
                 ori = substrate_data['oris']
                 ids = substrate_data['indexes']
             else:
-                layer_data = np.load(os.path.join(data_path["data_layers"], f"substrate.npz"))
+                layer_data = np.load(os.path.join(data_path, f"layer_{lay}.npz"))
                 coo = layer_data['coords']
                 ori = layer_data['oris']
                 ids = layer_data['indexes']
@@ -36,12 +36,14 @@ def create_sub_selection(domain: dict, data_path: str, save_path: str):
                 (coo[:, 1] > domain['y_min']) & (coo[:, 1] < domain['y_max']) &
                 (coo[:, 2] > domain['z_min']) & (coo[:, 2] < domain['z_max'])
             )
+
             sub_coo = np.vstack((coo[selection, 0] - domain['x_min'],
                                  coo[selection, 1] - domain['y_min'],
                                  coo[selection, 2] - domain['z_min'])).T
             np.savetxt(final_coo, sub_coo)
             np.savetxt(final_ori, ori[selection])
             np.savetxt(final_id, ids[selection])
+            
             grains_per_layers.append(np.unique(ids[selection]).size)
             N_seeds += len(sub_coo)
 
