@@ -30,6 +30,9 @@ outputs/
 
 # Python packaging
 *.egg-info/
+*.egg
+*.pyd
+*.o
 dist/
 build/
 
