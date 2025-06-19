@@ -1,11 +1,13 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="FAST-MMAM",
+    name="TesselAM",
     version="0.1.0",
-    description="FAST-MMAM: Fast simulation model for Metallic Microstructure Additive Manufacturing: \
-        a computational model for competitive grain growth prediction during directional solidification \
-        taking place during additive manufacturing process",
+    description="TesselAM (Tessellation-based Additive Manufacturing) is a fast computational model " + \
+                "for predicting competitive grain growth during directional solidification in metallic additive manufacturing. " + \
+                "The name 'TesselAM' is inspired by the concept of tessellation, as the microstructure is represented " + \
+                "through a set of seeds. Multiple seeds sharing the same identifier and orientation collectively define individual grains, " + \
+                "enabling an efficient and physically consistent reconstruction of the evolving grain structure.",
     author="Quentin Dollé",
     author_email="quentin.dolle@polytechnique.edu",
     url="https://",
