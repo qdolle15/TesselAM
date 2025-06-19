@@ -4,7 +4,7 @@
 
 It is a modular, extensible Python framework for simulating **competitive grain growth** during **directional solidification** such as in **additive manufacturing (AM)** or **welding**. The objective is to deliver **physically motivated**, **statistically meaningful**, and **visualization-ready** predictions of microstructural evolution, while maintaining **computational efficiency**.
 
-This framework is not intended to replace existing models such as **Phase-Field** or **Cellular Automaton** approaches. Instead, **FAST-MMAM** offers a complementary perspective by leveraging **upscaled physical observations** to enable **faster** and **less resource-intensive simulations**, particularly suitable for **in situ microstructure monitoring** and rapid design exploration.
+This framework is not intended to replace existing models such as **Phase-Field** or **Cellular Automaton** approaches. Instead, **TesselAM** offers a complementary perspective by leveraging **upscaled physical observations** to enable **faster** and **less resource-intensive simulations**, particularly suitable for **in situ microstructure monitoring** and rapid design exploration.
 
 ---
 
@@ -52,7 +52,7 @@ This framework is not intended to replace existing models such as **Phase-Field*
 ## Project Structure
 
 ```text
-FAST-MMAM/
+TesselAM/
 |
 ├── configs/                             # Configuration scripts for multiple simulations (Respect name and format of this file)
 │   ├── config_1.py
@@ -124,11 +124,11 @@ pip install -e .
 ```
 * Uninstall through the following command line:
 ```bash
-pip uninstall FAST-MMAM
+pip uninstall TesselAM
 ```
 * Check the presence using:
 ```bash
-pip list | grep FAST
+pip list | TesselAM
 ```
 
 ## EBSD-like Visualization
@@ -137,7 +137,7 @@ pip list | grep FAST
 Official install guide for ubuntu:  
 https://neper.info/doc/tutorials/install_ubuntu22.html#installation-ubuntu-22
 
-Once installed, FAST-MMAM will:
+Once installed, TesselAM will:
 - extract seeds in a subdomain of the simulation domain
 - run a 3D raster tessellation with Neper
 - Reconstruct a 3D arrays in python with id of the voxels corresponding to grain id
