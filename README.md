@@ -1,10 +1,11 @@
 # Grain Growth Model
 
-**FAST-MMAM** stands for **Fast Simulation Model for Metallic Microstructure in Additive Manufacturing**. 
+**TesselAM** stands for **Tessellation-inspired Simulation for Additive Manufacturing**. 
 
 It is a modular, extensible Python framework for simulating **competitive grain growth** during **directional solidification** such as in **additive manufacturing (AM)** or **welding**. The objective is to deliver **physically motivated**, **statistically meaningful**, and **visualization-ready** predictions of microstructural evolution, while maintaining **computational efficiency**.
 
 This framework is not intended to replace existing models such as **Phase-Field** or **Cellular Automaton** approaches. Instead, **FAST-MMAM** offers a complementary perspective by leveraging **upscaled physical observations** to enable **faster** and **less resource-intensive simulations**, particularly suitable for **in situ microstructure monitoring** and rapid design exploration.
+
 ---
 
 ## Features
