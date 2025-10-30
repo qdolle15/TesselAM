@@ -149,6 +149,8 @@ Once installed, TesselAM will:
 Distributed for academic use. Please cite the author or related publication if used in a research project.
 DOI of the associated publication: https://doi.org/10.1016/j.commatsci.2024.113112
 
+Citation for the python framework: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17482024.svg)](https://doi.org/10.5281/zenodo.17482024)
+
 ## Author
 Developed by Quentin Dollé. For questions or contributions, open an issue or contact me directly.
 mel: quentin.dolle@polytechnique.edu  
