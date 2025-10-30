@@ -40,6 +40,11 @@ def main(config_path):
     config: ConfigProtocol = load_config_module(config_path)
     validate_config_module(config)
 
+    if not config.START:
+        print("Simulation can't start due to config file")
+        return
+    
+
     # Extract label from config filename
     label = os.path.splitext(os.path.basename(config_path))[0]
     working_paths = initialize_output_directory(label=label, base_folder="outputs")
