@@ -65,7 +65,7 @@ def generate_simulation_report(data: dict, config_module, output_file: str):
         return f"{title}:\n" + "-" * (len(title)+1) + "\n"
 
     with open(output_file, "w") as f:
-        f.write("# FAST-MMAM Simulation Report\n")
+        f.write("# TesselAM Simulation Report\n")
         f.write("=" * 29 + "\n\n")
         f.write(f"{'Date simulation':<37}: {data['date start simulation']}\n")
         f.write(f"{'Elapsed time:':<37}: {data['tot. simulation time']} sec.\n")
@@ -148,7 +148,7 @@ def generate_visualization_report(output_file: str, data: dict, cut_views: list[
 
 
     with open(output_file, 'w') as f:
-        f.write("# FAST-MMAM Visualization Report\n\n")
+        f.write("# TesselAM Visualization Report\n\n")
         f.write(f"Total domains visualized: {len(cut_views)}\n\n")
 
         for idx, cut_view in enumerate(cut_views):
@@ -168,6 +168,7 @@ def generate_visualization_report(output_file: str, data: dict, cut_views: list[
             if idx in data:
                 info = data[idx]
                 f.write("\nTessellation Info:\n")
+                f.write(f"  Status               : {'Aborted due to size file' if info['status'] else 'Clear'}\n")
                 f.write(f"  Number of voxels     : {info.get('voxels', 'N/A')}\n")
                 f.write(f"  Number of seeds      : {info.get('N', 'N/A')}\n")
                 f.write(f"  Number of grains/layer: {info.get('grains_per_layers', 'N/A')}\n")

@@ -3,20 +3,20 @@ import numpy as np
 # ========== Simulation Parameters ==========
 
 START_SIMULATION = True
-RANDOM_SEED = 108
+RANDOM_SEED = 15
 np.random.seed(RANDOM_SEED)
 
 # Dimensions of the simulation domain
 LENGTH_SIMULATION = 1.5       # x-axis (mm)
 WIDTH_SIMULATION = 3        # y-axis (mm)
-BD_INCREMENTS = 3.5         # z-step between meltpool layers
+BD_INCREMENTS = 1.5         # z-step between meltpool layers
 
 # Grain spacing and diameter
-D0 = 0.1
+D0 = 0.02
 D_seeds = 0.1
 
 # Grain competition threshold
-THRESHOLD = 1.5
+THRESHOLD = 1.
 
 # Add random noise to seeds to avoid singularities
 NOISE_NEPER = 0
@@ -47,7 +47,7 @@ THERMAL_HISTORY = {
         'width':10,
         'height':3,
         'PD':-1,
-        'epitaxy':True
+        'epitaxy':False
     },
 }
 
@@ -84,7 +84,7 @@ Z_ULTIMATE = (
 # ========== Visualization Domains ==========
 CUT_VIEWS = [
     {
-        "domain" : {"x_min": 0.4, "x_max": 1.1, "y_min": -0.02, "y_max": 0.02, "z_min": 0, "z_max": 0.3},
+        "domain" : {"x_min": 0.2, "x_max": 0.65, "y_min": -0.15, "y_max": 0.15, "z_min": 0.5, "z_max": 2.0},
         "plans" : [
             ("XZ", 0.25), 
             ("XZ", 0.50),
@@ -92,7 +92,39 @@ CUT_VIEWS = [
         ]
     },
     {
-        "domain" : {"x_min": 0.7, "x_max": 0.8, "y_min": -0.15, "y_max": 0.15, "z_min": 0, "z_max": 0.3},
+        "domain" : {"x_min": 0.55, "x_max": 0.95, "y_min": -0.15, "y_max": 0.15, "z_min": 0.5, "z_max": 2.0},
+        "plans" : [
+            ("XZ", 0.25), 
+            ("XZ", 0.50),
+            ("XZ", 0.75),
+        ]
+    },
+    {
+        "domain" : {"x_min": 0.90, "x_max": 1.25, "y_min": -0.15, "y_max": 0.15, "z_min": 0.5, "z_max": 2.0},
+        "plans" : [
+            ("XZ", 0.25), 
+            ("XZ", 0.50),
+            ("XZ", 0.75),
+        ]
+    },
+    {
+        "domain" : {"x_min": 0.5, "x_max": 0.8, "y_min": -3, "y_max": -0.9, "z_min": 0.6, "z_max": 2.5},
+        "plans" : [
+            ("YZ", 0.25), 
+            ("YZ", 0.50),
+            ("YZ", 0.75),
+        ]
+    }, 
+    {
+        "domain" : {"x_min": 0.5, "x_max": 0.8, "y_min": -1.1, "y_max": 1.1, "z_min": 0.6, "z_max": 2.5},
+        "plans" : [
+            ("YZ", 0.25), 
+            ("YZ", 0.50),
+            ("YZ", 0.75),
+        ]
+    },
+    {
+        "domain" : {"x_min": 0.5, "x_max": 0.8, "y_min": 0.9, "y_max": 3, "z_min": 0.6, "z_max": 2.5},
         "plans" : [
             ("YZ", 0.25), 
             ("YZ", 0.50),
