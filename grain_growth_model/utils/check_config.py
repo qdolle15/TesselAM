@@ -15,7 +15,7 @@ class ConfigProtocol(Protocol):
     THERMAL_HISTORY: dict
     EGD_FAMILY: np.ndarray
     CUT_VIEWS: list
-    START: bool
+    GLOBAL_DOMAIN: dict
     RANDOM_SEED: int
 
 
@@ -46,8 +46,8 @@ def validate_config_module(config_module, required_fields=None):
             "THERMAL_HISTORY",
             "EGD_FAMILY",
             "CUT_VIEWS",
-            "START",
-            "RANDOM_SEED"
+            "RANDOM_SEED",
+            "GLOBAL_DOMAIN",
         ]
 
     missing = [field for field in required_fields if not hasattr(config_module, field)]

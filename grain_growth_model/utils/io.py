@@ -1,49 +1,110 @@
 import os
+from typing import Dict
+from datetime import datetime
+import importlib.util
+import argparse
+import re
+from typing import Tuple, List
 
+# Inputs
+def load_config_module(config_path: str):
+    """Safely load a Python configuration file."""
+    if not os.path.isfile(config_path):
+        raise FileNotFoundError(f"Config file not found: {config_path}")
+    spec = importlib.util.spec_from_file_location("custom_config", config_path)
+    config = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(config)
+    return config
 
-def initialize_output_directory(label=None, base_folder="outputs"):
+def parse_arguments():
     """
-    Create and return a fresh output directory for the current simulation.
+    Parse command line arguments.
 
-    Parameters
-    ----------
-        label (str or None) Optional subfolder name. If None, a timestamped folder is created.
-        base_folder (str): Root permanent folder for all simulations.
-
-    Returns
-    -------
-        (dict): Dictionary with all created paths (root, coordinates/, etc.)
+    Returns:
+        argparse.Namespace: Parsed arguments.
     """
+    parser = argparse.ArgumentParser(description="Visualize the results.")
+    parser.add_argument("config_path", help="Path to the configuration file.")
+    parser.add_argument("--root", help="Root directory for the simulation.")
+    parser.add_argument("--data", help="Directory for intermediate data.")
+    parser.add_argument("--results", help="Directory for visualizations.")
+    parser.add_argument("--reports", help="Directory for reports.")
+    return parser.parse_args()
+
+
+# 
+def initialize_output_directory(label: str, base_folder: str = "outputs", force_new: bool = False) -> Dict[str, str]:
+    """
+    Create and return a directory for the current simulation.
+
+    If force_new is False and the directory does not exist, a FileNotFoundError is raised.
+    If force_new is True, a new directory is created, possibly with an incremented suffix.
+
+    Parameters:
+        label (str): Name of the simulation (e.g., config file name).
+                     If None, a timestamped folder is created.
+        base_folder (str): Root folder for all simulations (default: "outputs").
+        force_new (bool): If True, create a new directory even if the label already exists.
+                          If False, reuse the existing directory or raise an error if it does not exist.
+
+    Returns:
+        dict: Dictionary with paths to the created directories:
+              - "root": Root directory for the simulation.
+              - "data": Directory for intermediate data (e.g., `.npz` files).
+              - "results": Directory for visualizations (e.g., images).
+              - "reports": Directory for reports and metrics.
+
+    Raises:
+        FileNotFoundError: If force_new is False and the directory does not exist.
+    """
+    # Create the base folder if it doesn't exist
     os.makedirs(base_folder, exist_ok=True)
 
-    if label is None:
-        label = "simulation"
+    # Initialize the output root path
+    output_root = os.path.join(base_folder, label)
 
-    # Base timestamp
-    base_name = f"{label}_0001"
-    output_root = os.path.join(base_folder, base_name)
+    if force_new:
+        # If force_new is True, find a new directory name
+        counter = 1
+        while os.path.exists(output_root):
+            output_root = os.path.join(base_folder, f"{label}_{counter:04d}")
+            counter += 1
+    else:
+        # If force_new is False, check if the directory exists
+        if not os.path.exists(output_root):
+            raise FileNotFoundError(f"The directory {output_root} does not exist.")
 
-    # Check for existing folders with similar names and increment if needed
-    counter = 2
-    while os.path.exists(output_root):
-        base_name = f"{label}_{counter:04d}"
-        output_root = os.path.join(base_folder, base_name)
-        counter += 1
+    # Create the root directory if it doesn't exist (only if force_new is True or directory already exists)
+    os.makedirs(output_root, exist_ok=True)
 
-    output_root = os.path.join(base_folder, base_name)
-    os.makedirs(output_root)
-
-    subfolders = ["data", "results", 'reports']
+    # Create subdirectories
+    subfolders = ["data", "results"]
     paths = {"root": output_root}
-
-    for sub in subfolders:
-        path = os.path.join(output_root, sub)
+    for subfolder in subfolders:
+        path = os.path.join(output_root, subfolder)
         os.makedirs(path, exist_ok=True)
-        paths[sub] = path
+        paths[subfolder] = path
 
     return paths
 
+def get_domain_output_directory(root_results_dir: str, domain_index: int, plane: str) -> str:
+    """
+    Create a subdirectory for a specific domain's results.
 
+    Args:
+        root_results_dir: Path to the root results directory.
+        domain_index: Index of the domain (e.g., 1, 2, 3).
+        plane: Cut plane (e.g., "XZ", "YZ").
+
+    Returns:
+        str: Path to the domain-specific subdirectory.
+    """
+    domain_dir = os.path.join(root_results_dir, f"domain_{domain_index}__{plane}")
+    os.makedirs(domain_dir, exist_ok=True)
+    return domain_dir
+
+
+# Reports
 def generate_simulation_report(data: dict, config_module, output_file: str):
     """
     Generate a well-formatted plain text report for FAST-MMAM, including configuration,
@@ -123,7 +184,6 @@ def generate_simulation_report(data: dict, config_module, output_file: str):
             #         f.write(f"| {key:<30} | {val:<16} |\n")
             #     f.write("+--------------------------------+------------------+\n\n")
 
-
 def generate_visualization_report(output_file: str, data: dict, cut_views: list[dict]):
     """
     Save a structured summary of the visualization settings and domains.
@@ -168,7 +228,7 @@ def generate_visualization_report(output_file: str, data: dict, cut_views: list[
             if idx in data:
                 info = data[idx]
                 f.write("\nTessellation Info:\n")
-                f.write(f"  Status               : {'Aborted due to size file' if info['status'] else 'Clear'}\n")
+                f.write(f"  Status               : {'Aborted due to size file' if not info['status'] else 'Clear'}\n")
                 f.write(f"  Number of voxels     : {info.get('voxels', 'N/A')}\n")
                 f.write(f"  Number of seeds      : {info.get('N', 'N/A')}\n")
                 f.write(f"  Number of grains/layer: {info.get('grains_per_layers', 'N/A')}\n")
@@ -176,3 +236,113 @@ def generate_visualization_report(output_file: str, data: dict, cut_views: list[
                 f.write(f"  Command used         :\n    {info.get('cmd', '').strip()}\n")
 
             f.write("\n")
+
+
+# Compare config and reports
+def compare_simulation_data(report_path: str, config_path: str) -> Tuple[bool, List[str]]:
+    """
+    Compare simulation data between a report text file and a configuration Python file.
+    Returns a tuple with a boolean indicating if all data match and a list of error messages.
+
+    Args:
+        report_path (str): Path to the report text file.
+        config_path (str): Path to the configuration Python file.
+
+    Returns:
+        Tuple[bool, List[str]]: A tuple with a boolean indicating if all data match and a list of error messages.
+    """
+    if not os.path.exists(report_path):
+        return False, [f"Report file not found: {report_path}"]
+
+    # Load the configuration file
+    spec = importlib.util.spec_from_file_location("config", config_path)
+    config = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(config)
+
+    # Read the report file
+    with open(report_path, 'r') as file:
+        report_content = file.read()
+
+    errors = []
+
+    try:
+        # Extract relevant data from the report
+        report_data = {}
+        try:
+            report_data['Simulation length'] = extract_value(report_content, r'Simulation length\s*:\s*([\d.]+)\s*mm')
+        except ValueError as e:
+            errors.append(str(e))
+
+        try:
+            report_data['Simulation width'] = extract_value(report_content, r'Simulation width\s*:\s*([\d.]+)\s*mm')
+        except ValueError as e:
+            errors.append(str(e))
+
+        try:
+            report_data['Building direction increment'] = extract_value(report_content, r'Building direction increment\s*:\s*([\d.]+)\s*mm')
+        except ValueError as e:
+            errors.append(str(e))
+
+        try:
+            report_data['Mean grain size (D0)'] = extract_value(report_content, r'Mean grain size \(D0\)\s*:\s*([\d.]+)\s*mm')
+        except ValueError as e:
+            errors.append(str(e))
+
+        try:
+            report_data['Threshold for conflict detection'] = extract_value(report_content, r'Threshold for conflict detection\s*:\s*([\d.]+)')
+        except ValueError as e:
+            errors.append(str(e))
+
+        try:
+            report_data['Randomness number'] = extract_value(report_content, r'Randomness number\s*:\s*([\d.]+)')
+        except ValueError as e:
+            errors.append(str(e))
+
+        if not errors:
+            # Compare relevant data
+            if abs(report_data['Simulation length'] - config.LENGTH_SIMULATION) > 1e-6:
+                errors.append(f"Simulation length mismatch: Report={report_data['Simulation length']}, Config={config.LENGTH_SIMULATION}")
+
+            if abs(report_data['Simulation width'] - config.WIDTH_SIMULATION) > 1e-6:
+                errors.append(f"Simulation width mismatch: Report={report_data['Simulation width']}, Config={config.WIDTH_SIMULATION}")
+
+            if abs(report_data['Building direction increment'] - config.BD_INCREMENTS) > 1e-6:
+                errors.append(f"Building direction increment mismatch: Report={report_data['Building direction increment']}, Config={config.BD_INCREMENTS}")
+
+            if abs(report_data['Mean grain size (D0)'] - config.D0) > 1e-6:
+                errors.append(f"Mean grain size (D0) mismatch: Report={report_data['Mean grain size (D0)']}, Config={config.D0}")
+
+            if abs(report_data['Threshold for conflict detection'] - config.THRESHOLD) > 1e-6:
+                errors.append(f"Threshold for conflict detection mismatch: Report={report_data['Threshold for conflict detection']}, Config={config.THRESHOLD}")
+
+            if abs(report_data['Randomness number'] - config.RANDOM_SEED) > 1e-6:
+                errors.append(f"Randomness number mismatch: Report={report_data['Randomness number']}, Config={config.RANDOM_SEED}")
+
+    except Exception as e:
+        errors.append(f"Unexpected error during comparison: {e}")
+
+    return (len(errors) == 0, errors)
+
+def extract_value(content: str, pattern: str) -> float:
+    """
+    Extract a value from text content using a regex pattern.
+    Handles values with units (e.g., "3 mm" -> 3).
+
+    Args:
+        content (str): Text content to search.
+        pattern (str): Regex pattern to find the value.
+
+    Returns:
+        float: Extracted value.
+
+    Raises:
+        ValueError: If the value cannot be found.
+    """
+    match = re.search(pattern, content)
+    if not match:
+        raise ValueError(f"Value not found for pattern: {pattern}")
+
+    # Extract the numeric part, ignoring any units
+    value_str = match.group(1)
+    numeric_value = re.sub(r'[^\d.]', '', value_str)  # Remove non-numeric characters
+    return float(numeric_value)

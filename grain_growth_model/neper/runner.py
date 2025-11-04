@@ -59,7 +59,7 @@ def EBSD_like(No_layer:int, domain: dict, cut_view: list, save: bool, data_path_
             'work_path': domain_path_dir,
             'time_tess': time_tess,
             'grains_per_layers': grains_per_layers,
-            'status': "aborted due to low ram"
+            'status': False
         }
 
     # Load crystal orientations
@@ -81,7 +81,7 @@ def EBSD_like(No_layer:int, domain: dict, cut_view: list, save: bool, data_path_
 
     # Loop over requested 2D views
     for plane, position in cut_view:
-        print(f"\nplan {plane} - position {position*100:03d} %\n-----------------------")
+        print(f"\nplan {plane} - position {int(position*100):02d} %\n-----------------------")
         direction = "z"
         suf = f"{int(position * 100):03d}"
 
@@ -128,6 +128,6 @@ def EBSD_like(No_layer:int, domain: dict, cut_view: list, save: bool, data_path_
         'work_path': domain_path_dir,
         'time_tess': time_tess,
         'grains_per_layers': grains_per_layers,
-        'status': 'enough RAM for visualization'
+        'status': True
     }
 

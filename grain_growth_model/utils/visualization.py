@@ -1,9 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
+from typing import List, Dict
 import os
 
-
+## Check thermal history
 def plot_thermal_history_cross_section(
         thermal_layers:dict, 
         bd_increment: float,
@@ -85,7 +86,195 @@ def plot_thermal_history_cross_section(
     plt.close()
 
 
-def show_domains(thermal_history, simulation_length, simulation_width, bd_increment, z_ultimate, domain_path_dir, save, domain, cut_view):
+## Visualization domain segmentation 
+def generate_subdomains(global_domain, axis, num_subdomains, overlap_ratio=0.1):
+    """
+    Generate subdomains of equal size with overlap for stitching.
+
+    Parameters:
+        global_domain (dict): Global domain (e.g., {"x_min": 0, "x_max": 2, ...}).
+        axis (str): Direction of splitting ("x", "y", or "z").
+        num_subdomains (int): Number of subdomains to create.
+        overlap_ratio (float): Overlap ratio between subdomains (e.g., 0.1 for 10%).
+
+    Returns:
+        list: List of subdomain dictionaries.
+    """
+    min_key = f"{axis}_min"
+    max_key = f"{axis}_max"
+    min_val = global_domain[min_key]
+    max_val = global_domain[max_key]
+    total_length = max_val - min_val
+
+    # Calculate the length of each subdomain (including overlap)
+    subdomain_length = total_length / num_subdomains
+    overlap = subdomain_length * overlap_ratio
+    step = subdomain_length - overlap
+
+    subdomains = []
+    for i in range(num_subdomains):
+        start = min_val + i * step
+        end = start + subdomain_length
+
+        # Create the subdomain
+        subdomain = global_domain.copy()
+        subdomain[min_key] = start
+        subdomain[max_key] = end
+
+        subdomains.append(subdomain)
+
+    return subdomains
+
+def generate_segmented_cut_views(
+    global_domain: dict,
+    axis: str,
+    num_subdomains: int,
+    overlap_ratio: float = 0.1,
+    planes: list = ["XZ"],  # Par défaut, on utilise des plans XZ
+    rel_positions: list = [0.25, 0.5, 0.75]
+) -> list:
+    """
+    Generate CUT_VIEWS by segmenting a global domain into subdomains with overlap.
+
+    Args:
+        global_domain: Global domain (e.g., {"x_min": 0, "x_max": 2, ...}).
+        axis: Axis along which to split the domain ("x", "y", or "z").
+        num_subdomains: Number of subdomains to create.
+        overlap_ratio: Overlap ratio between subdomains (e.g., 0.1 for 10%).
+        planes: List of planes for cuts (e.g., ["XZ"]).
+        rel_positions: Relative positions for cuts (e.g., [0.25, 0.5, 0.75]).
+
+    Returns:
+        List of CUT_VIEWS dictionaries.
+    """
+    # Générer les sous-domaines
+    subdomains = generate_subdomains(global_domain, axis, num_subdomains, overlap_ratio)
+
+    # Générer les CUT_VIEWS pour chaque sous-domaine
+    cut_views = []
+    for subdomain in subdomains:
+        cut_views.append({
+            "domain": subdomain,
+            "plans": [(plane, pos) for plane in planes for pos in rel_positions]
+        })
+
+    return cut_views
+
+def show_domains(
+    thermal_history, simulation_length, simulation_width, bd_increment, z_ultimate,
+    domain_path_dir, save, domain, cut_view, global_domain=None
+):
+    """
+    Show visual cuts (e.g., XZ, YZ) of meltpool, global domain, and subdomains.
+
+    Parameters:
+        thermal_history (dict): Thermal history data.
+        simulation_length (float): Length of the simulation.
+        simulation_width (float): Width of the simulation.
+        bd_increment (float): Build increment.
+        z_ultimate (float): Ultimate Z height.
+        domain_path_dir (str): Path to save the plot.
+        save (bool): Whether to save the plot.
+        domain (dict): Subdomain to visualize (keys: x_min, x_max, y_min, y_max, z_min, z_max).
+        cut_view (list): List of cut planes (e.g., [("XZ", 0.5), ("YZ", 0.5)]).
+        global_domain (dict, optional): Global domain to visualize.
+    """
+    # Calculate Y limits
+    YMAX = (len(thermal_history) - 1) * bd_increment + thermal_history[0]['height']
+    YLIM = [i * bd_increment + thermal_history[0]['height'] for i in range(len(thermal_history))]
+    YLIM.insert(0, 0)
+
+    # Initialize plot
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6), sharey=True)
+    plt.subplots_adjust(wspace=0)
+
+    # --- Substrate ---
+    ypos = np.linspace(-simulation_width / 2, simulation_width / 2, 5000, endpoint=True)
+    zsubstrat = thermal_history[0]['height'] - thermal_history[0]['height'] * np.sqrt(1 - (2 * ypos / thermal_history[0]['width']) ** 2)
+    ax1.fill_between(ypos, 0, zsubstrat, color='black', alpha=0.5)
+
+    # --- Thermal history layers ---
+    colors = list(mcolors.BASE_COLORS.values())
+    z_source = thermal_history[0]['height']
+    for layer in range(len(thermal_history)):
+        col = colors[layer % len(colors)]
+        w = thermal_history[layer]['width']
+        d = thermal_history[layer]['height']
+        zpos = z_source - d * np.sqrt(1 - (2 * ypos / w) ** 2)
+        z_source += bd_increment
+
+        ax1.scatter(0, layer * bd_increment + thermal_history[0]['height'], color=col)
+        ax1.plot(ypos, zpos, c=col)
+        ax2.hlines(y=layer * bd_increment + thermal_history[0]['height'], xmin=0, xmax=simulation_length, color='k')
+        ax2.hlines(y=np.min(zpos), xmin=0, xmax=simulation_length, color=col)
+        ax2.hlines(y=np.max(zpos), xmin=0, xmax=simulation_length, color=col)
+        ax2.fill_between([0, simulation_length], np.min(zpos), np.max(zpos), color=col, alpha=0.2)
+
+    # --- Simulation domain ---
+    ax1.vlines(x=[-simulation_width / 2, simulation_width / 2], ymin=0, ymax=YMAX, color='k')
+    ax1.hlines(y=YLIM, xmin=-simulation_width / 2, xmax=simulation_width / 2, color='k')
+    ax1.hlines(y=z_ultimate, xmin=-simulation_width / 2, xmax=simulation_width / 2, color='k', ls='--')
+    ax2.vlines(x=[0, simulation_length], ymin=0, ymax=YMAX, color='k')
+    ax2.hlines(y=z_ultimate, xmin=0, xmax=simulation_length, color='k', ls='--')
+
+    # --- Visualisation domain ---
+    if global_domain:
+        global_color = 'chartreuse'
+        ax1.hlines(y=[global_domain['z_min'], global_domain['z_max']],
+                  xmin=global_domain['y_min'], xmax=global_domain['y_max'], color=global_color, ls='--')
+        ax1.vlines(x=[global_domain['y_min'], global_domain['y_max']],
+                  ymin=global_domain['z_min'], ymax=global_domain['z_max'], color=global_color, ls='--')
+        ax2.hlines(y=[global_domain['z_min'], global_domain['z_max']],
+                  xmin=global_domain['x_min'], xmax=global_domain['x_max'], color=global_color, ls='--')
+        ax2.vlines(x=[global_domain['x_min'], global_domain['x_max']],
+                  ymin=global_domain['z_min'], ymax=global_domain['z_max'], color=global_color, ls='--')
+
+    # --- Subdomain ---
+    subdomain_color = 'chartreuse'
+    ax1.hlines(y=[domain['z_min'], domain['z_max']],
+              xmin=domain['y_min'], xmax=domain['y_max'], color=subdomain_color)
+    ax1.vlines(x=[domain['y_min'], domain['y_max']],
+              ymin=domain['z_min'], ymax=domain['z_max'], color=subdomain_color)
+    ax2.hlines(y=[domain['z_min'], domain['z_max']],
+              xmin=domain['x_min'], xmax=domain['x_max'], color=subdomain_color)
+    ax2.vlines(x=[domain['x_min'], domain['x_max']],
+              ymin=domain['z_min'], ymax=domain['z_max'], color=subdomain_color)
+
+    # --- Cut planes ---
+    cut_color = 'red'
+    for plane, position in cut_view:
+        if plane == 'XZ':
+            y_cut = domain['y_min'] + position * (domain['y_max'] - domain['y_min'])
+            ax1.vlines(x=y_cut, ymin=domain['z_min'], ymax=domain['z_max'], color=cut_color, ls='dashdot', lw=1.5)
+        elif plane == 'YZ':
+            x_cut = domain['x_min'] + position * (domain['x_max'] - domain['x_min'])
+            ax2.vlines(x=x_cut, ymin=domain['z_min'], ymax=domain['z_max'], color=cut_color, ls='dashdot', lw=1.5)
+        elif plane == 'XY':
+            z_cut = domain['z_min'] + position * (domain['z_max'] - domain['z_min'])
+            ax1.hlines(y=z_cut, xmin=domain['y_min'], xmax=domain['y_max'], color=cut_color, ls='dashdot', lw=1.5)
+            ax2.hlines(y=z_cut, xmin=domain['x_min'], xmax=domain['x_max'], color=cut_color, ls='dashdot', lw=1.5)
+
+    # --- Plot formatting ---
+    ax1.set_ylim(-0.05, YMAX + 0.05)
+    ax1.set_aspect('equal', adjustable='box')
+    ax1.set_xlabel('Y axis')
+    ax1.set_ylabel('Z axis')
+    ax1.set_title('Front View')
+
+    ax2.set_ylim(-0.05, YMAX + 0.05)
+    ax2.set_xlabel('X axis')
+    ax2.set_ylabel('Z axis')
+    ax2.set_title('Side View')
+
+    # --- Save or show ---
+    plt.tight_layout()
+    if save:
+        plt.savefig(f'{domain_path_dir}')
+    else:
+        plt.show()
+    plt.close(fig)
+
+def show_domains_OLD(thermal_history, simulation_length, simulation_width, bd_increment, z_ultimate, domain_path_dir, save, domain, cut_view):
     """
     Show visual cuts (e.g., XZ, YZ) of meltpool and domain of interest.
 
@@ -189,6 +378,7 @@ def show_domains(thermal_history, simulation_length, simulation_width, bd_increm
     plt.close(fig)
 
 
+## Debugging zone
 def visualize_growth_vectors_2D(positions, directions, title="Growth directions", save_path=None, scale=0.03):
     """
     Display 2D arrows showing grain growth vectors.
@@ -222,7 +412,6 @@ def visualize_growth_vectors_2D(positions, directions, title="Growth directions"
     else:
         plt.show()
     plt.close()
-
 
 def visualize_seeds_at_interface(
         thermal_layers:dict, 
@@ -275,7 +464,6 @@ def visualize_seeds_at_interface(
         plt.savefig(f"{save_path}/meltpool_profiles.png", bbox_inches="tight", dpi=300)
     else:
         plt.show()
-
 
 def visualize_3d_growth_directions(
     display_ratio: float,
