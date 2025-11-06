@@ -164,7 +164,8 @@ def main():
             inter_seeds_distance=config.D_seeds,
             layer_index=layer_idx,
             noise_neper=config.NOISE_NEPER,
-            saving_path=working_paths["data"]
+            saving_path=working_paths["data"],
+            build_increment=config.BD_INCREMENTS
         )
 
         total_seeds_created += new_seeds

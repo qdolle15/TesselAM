@@ -184,7 +184,7 @@ def generate_simulation_report(data: dict, config_module, output_file: str):
             #         f.write(f"| {key:<30} | {val:<16} |\n")
             #     f.write("+--------------------------------+------------------+\n\n")
 
-def generate_visualization_report(output_file: str, data: dict, cut_views: list[dict]):
+def generate_visualization_report(output_file: str, data: dict, time_information: dict, cut_views: list[dict]):
     """
     Save a structured summary of the visualization settings and domains.
 
@@ -194,6 +194,8 @@ def generate_visualization_report(output_file: str, data: dict, cut_views: list[
         Path to the output text file.
     data : dict
         Dictionary containing visualization metadata or results per domain.
+    time_information : dict
+        Dictionnary containing the time elapsed for all the visualization steps and for each domain
     cut_views : list of dict
         List of domain + plane/position selections. Each item must have:
             - "domain": dict with keys x_min, x_max, y_min, y_max, z_min, z_max
@@ -209,12 +211,15 @@ def generate_visualization_report(output_file: str, data: dict, cut_views: list[
 
     with open(output_file, 'w') as f:
         f.write("# TesselAM Visualization Report\n\n")
-        f.write(f"Total domains visualized: {len(cut_views)}\n\n")
+        f.write(f"Total domains visualized: {len(cut_views)}\n")
+        f.write(f"Total time elapsed: {time_information['total']} s\n\n")
 
         for idx, cut_view in enumerate(cut_views):
             domain = cut_view["domain"]
             planes = cut_view["plans"]
             f.write(box_title(f"Domain {idx + 1}"))
+
+            f.write(f"\nTime elapsed for the domain: {time_information[idx]} s\n")
 
             f.write("\nSpatial bounds:\n")
             for key in ["x_min", "x_max", "y_min", "y_max", "z_min", "z_max"]:

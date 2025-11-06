@@ -60,9 +60,36 @@ def read_data(file_path, start_marker='**data', end_marker='***end'):
     return match.group(1).strip().split('\n')
 
 
-def transform_data(data):
+def transform_data_old(data):
     data_flat = []
     for line in data:
         if line != 'ascii':
             data_flat.extend([int(x) for x in line.split()])
     return np.array(data_flat, dtype=np.uint32)
+
+
+def transform_data(data, total_elements):
+    """
+    Transform data lines into a flat array of integers with optimized memory usage.
+
+    Args:
+        data (list): List of lines containing data.
+
+    Returns:
+        np.ndarray: Array of integers extracted from the data lines.
+    """
+
+    # Pre-allocate the numpy array
+    data_flat = np.empty(total_elements, dtype=np.uint32)
+
+    # Fill the array
+    index = 0
+    for line in data:
+        line = line.strip()
+        if line and line != 'ascii':
+            values = line.split()
+            for value in values:
+                data_flat[index] = int(value)
+                index += 1
+
+    return data_flat

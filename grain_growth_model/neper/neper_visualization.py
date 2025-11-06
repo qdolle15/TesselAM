@@ -1,3 +1,5 @@
+import os
+import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 from orix.quaternion import Orientation, symmetry
@@ -167,3 +169,47 @@ def pole_figure(flatten_ori: np.ndarray, path_save: str, save: bool):
         plt.close()
     else:
         plt.show()
+
+
+# Stiching
+def load_images_from_folders(base_path, num_subdomains=7, filename="EBSD_z_XZ_050.npy"):
+    """
+    Load images from .npy files in subfolders.
+    Assumes .npy files contain RGB arrays (shape: 2000x214x3).
+    """
+    images = []
+    for i in range(1, num_subdomains + 1):
+        folder_path = os.path.join(base_path, f"domain_{i}__XZ")
+        img_path = os.path.join(folder_path, filename)
+        if os.path.exists(img_path):
+            img = np.load(img_path)
+            images.append(img)
+        else:
+            raise FileNotFoundError(f"File not found: {img_path}")
+    return images
+
+def manual_stitch(images, overlap_ratio=0.2):
+    """
+    Stitch images manually, assuming horizontal order and known overlap.
+    """
+    if not images:
+        raise ValueError("No images to stitch.")
+
+    img_height, img_width, _ = images[0].shape
+    overlap = int(img_width * overlap_ratio)
+
+    # Total width = (image width × number of images) - (overlap × (number of images - 1))
+    total_width = img_width * len(images) - overlap * (len(images) - 1)
+    result = np.zeros((img_height, total_width, 3), dtype=images[0].dtype)
+
+    # Starting position
+    x_offset = 0
+    for img in images:
+        if x_offset == 0:
+            result[:, x_offset:x_offset + img_width, :] = img
+        else:
+            # Copy the non-overlapping part of the current image
+            result[:, x_offset + overlap:x_offset + img_width, :] = img[:, overlap:, :]
+        x_offset += img_width - overlap
+
+    return result

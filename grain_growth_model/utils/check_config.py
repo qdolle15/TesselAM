@@ -17,6 +17,8 @@ class ConfigProtocol(Protocol):
     CUT_VIEWS: list
     GLOBAL_DOMAIN: dict
     RANDOM_SEED: int
+    N_SUBDOMAINS:int
+    OVERLAPING_DOMAINS:float
 
 
 def validate_config_module(config_module, required_fields=None):
@@ -48,6 +50,8 @@ def validate_config_module(config_module, required_fields=None):
             "CUT_VIEWS",
             "RANDOM_SEED",
             "GLOBAL_DOMAIN",
+            "N_SUBDOMAINS",
+            "OVERLAPING_DOMAINS"
         ]
 
     missing = [field for field in required_fields if not hasattr(config_module, field)]

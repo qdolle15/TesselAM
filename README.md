@@ -64,13 +64,19 @@ TesselAM/
 │   ├── core/                            # Main algorithms and meltpool geometry
 │   ├── analysis/                        # Statistical post-processing
 │   ├── neper/                           # Tessellation-based EBSD visualization
+|   ├── scripts/
+|   │   ├── 01_validate_and_visualize_input.py   # Checking of the configuration files and preview of the domain and melt-pools activities
+|   │   ├── 02_run_simulation.py                 # Run the simulation to get all the seeds information within the domain
+|   │   ├── 03_visualize_results.py              # Results visualization for sub-domains: segmentation, images and stitching
+|   │   └── __init__.py
 │   └── utils/                           # I/O, visualization tools, configuration checks
 |
 ├── outputs/                             # <--- permanent output folder
-│   └── name_configuration_file_XXXXX/
+│   └── name_XXXXX/
 │       ├── data/
-│       ├── report/
 │       └── results/
+│           ├── sub_domain_XXXXX/
+|           └── ... 
 |
 ├── main.py                               # Main simulation driver script (root level)
 ├── requirements.txt                      # List of dependencies
@@ -93,19 +99,44 @@ Edit or duplicate any file in configs/. Each config defines:
 * Meltpool thermal profiles (length, width, depth)
 * Growth thresholds
 * Crystallographic directions
-
+* Visualization domains can be modified after a simulation to visualize different sub-domains by re-running the visualization mode without re-running the entire simulation.
 
 ### 3. Run the model
+To run the project, use the `main.py` script with the following arguments:
+
 ```bash
-python main.py configs/{name_of_the_python_configuration_file}.py
+python3 main.py -m <mode> -f <config_file> -o <output_directory>
+```
+* -m or --mode: Execution mode. Can be a combination of the following letters:
+    * C: Validate and visualize inputs.
+    * S: Run the simulation.
+    * V: Visualize the results.
+    * CSV: Run all steps (validate, simulate, visualize).
+    * ...
+* -f or --file: Path to the configuration file (e.g., configs/config_article.py).
+* -o or --output: Name of the output directory for results.
+#### Exemples:
+Run all steps:
+```bash
+python3 main.py -m CSV -f configs/config_article.py -o simulation_results
+```
+Validate and simulate only:
+```bash
+python3 main.py -m CS -f configs/config_article.py -o simulation_results
+```
+Visualize results only:
+```bash
+python3 main.py -m V -f configs/config_article.py -o simulation_results
 ```
 
-### 4. Visualize your results
-results saved in 'outputs/name_configuration_file_XXXXX/' containing:
-* Report of the simulation
-* Report of the visualization part
-* sub repositories for each domain with the EBSD like images / IPF triangles / PF
+### 4. Visualize Your Results
+Simulation results are saved in `outputs/name_of_your_repository/` and include:
 
+- **`data/`**: Contains the simulation report and raw data.
+- **`results/`**:
+  - **`checking/`**: Preview of thermal activity and visualization domains.
+  - **Sub-directories**: Created each time the visualization mode (`V`) is run, containing visualizations of different sub-domains.
+  
 ## Dependencies
 | Library     | Use                         |
 |-------------|-----------------------------|

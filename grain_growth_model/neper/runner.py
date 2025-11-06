@@ -1,4 +1,5 @@
 import os
+import gc
 import psutil
 import numpy as np
 
@@ -49,6 +50,8 @@ def EBSD_like(No_layer:int, domain: dict, cut_view: list, save: bool, data_path_
     txt_file_size = os.path.getsize(f'{domain_path_dir}/sub_coo.txt') / (1024 ** 3)  # Go
     total_file_size = tesr_file_size + txt_file_size
 
+    print(f"available RAM ({available_ram_gb:.2f} GB)")
+
     if total_file_size > 0.9 * available_ram_gb:
         print(f"Error: Total file size ({total_file_size:.2f} GB) exceeds 90% of available RAM ({0.9 * available_ram_gb:.2f} GB).")
         print("Simulation aborted to prevent a crash.")
@@ -69,16 +72,24 @@ def EBSD_like(No_layer:int, domain: dict, cut_view: list, save: bool, data_path_
     # Load 3D tessellation
     print("...loading tesr file...")
     tesr_raw = read_data(f'{domain_path_dir}/tessellation_3d.tesr')
+
     print("...extracting voxels information...")
-    tesr_flatten = transform_data(tesr_raw)
+    nbr_elem =  voxels[0]*voxels[1]*voxels[2]
+    tesr_flatten = transform_data(tesr_raw, total_elements=nbr_elem)
+    del tesr_raw
+    gc.collect()
+
     print("...shaping for a 3D array...")
     tesr_3d = np.transpose(
         tesr_flatten.reshape((voxels[2], voxels[1], voxels[0])),
         (0, 1, 2)
     )
+    del tesr_flatten
+    gc.collect()
+
     # The grain is made up of voxels, each voxel with the identifier of the grain to which it belongs. \
     # This identifier corresponds to the line in the 'sub_ori.txt' file.
-
+    
     # Loop over requested 2D views
     for plane, position in cut_view:
         print(f"\nplan {plane} - position {int(position*100):02d} %\n-----------------------")
@@ -109,6 +120,9 @@ def EBSD_like(No_layer:int, domain: dict, cut_view: list, save: bool, data_path_
             save=save,
             path_save=f'{domain_path_dir}/EBSD_{direction}_{plane}_{suf}.png'
         )
+
+        np.save(f'{domain_path_dir}/EBSD_{direction}_{plane}_{suf}.npy', array_EBSD_like_colored)
+        np.save(f'{domain_path_dir}/IPF_{direction}_triangle_{plane}_{suf}.npy', cut_angles_flatten)
         # image_IPF_triangle(
         #     flatten_ori=cut_angles_flatten,
         #     direction=direction,

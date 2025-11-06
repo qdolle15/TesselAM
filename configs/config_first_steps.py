@@ -8,16 +8,16 @@ RANDOM_SEED = 15
 np.random.seed(RANDOM_SEED)
 
 # Dimensions of the simulation domain
-LENGTH_SIMULATION = 3.1     # x-axis (mm)
+LENGTH_SIMULATION = 3.0     # x-axis (mm)
 WIDTH_SIMULATION = 0.3        # y-axis (mm)
 BD_INCREMENTS = 0.15         # z-step between meltpool layers
 
 # Grain spacing and diameter
-D0 = 0.02
-D_seeds = 0.3
+D0 = 0.01
+D_seeds = 0.1
 
 # Grain competition threshold
-THRESHOLD = 1.2
+THRESHOLD = 1.
 
 # Add random noise to seeds to avoid singularities
 NOISE_NEPER = 0
@@ -41,14 +41,14 @@ THERMAL_HISTORY = {
         'width':0.35,
         'height':0.2,
         'PD':+1,
-        'epitaxy':False
+        'epitaxy':True
     },
     1:{
         'length':23,
         'width':0.45,
         'height':0.222,
         'PD':-1,
-        'epitaxy':False
+        'epitaxy':True
     },
 }
 

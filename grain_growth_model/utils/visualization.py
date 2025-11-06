@@ -28,7 +28,7 @@ def plot_thermal_history_cross_section(
     """
 
     # Setup colors and gradients
-    base_colors = list(mcolors.BASE_COLORS.values())
+    base_colors = list(mcolors.BASE_COLORS.values())[:-1]
     n_lines = 10
     log_space = np.logspace(0, -2, num=n_lines)
     alpha_space = 1 - log_space  # transparency control
@@ -273,110 +273,6 @@ def show_domains(
     else:
         plt.show()
     plt.close(fig)
-
-def show_domains_OLD(thermal_history, simulation_length, simulation_width, bd_increment, z_ultimate, domain_path_dir, save, domain, cut_view):
-    """
-    Show visual cuts (e.g., XZ, YZ) of meltpool and domain of interest.
-
-    Parameters
-    ----------
-    thermal_history : dict
-    domain_path_dir : str
-    save : bool
-    domain : dict
-        Keys: x_min, x_max, y_min, y_max, z_min, z_max
-    cut_view : list of (str, float)
-    """
-
-    YMAX = (len(thermal_history) - 1) * bd_increment + thermal_history[0]['height']
-    YLIM = [i * bd_increment + thermal_history[0]['height'] for i in range(len(thermal_history))]
-    YLIM.insert(0, 0)
-    colors = mcolors.BASE_COLORS
-    col_keys = list(colors.keys())
-    z_source = thermal_history[0]['height']
-    ypos = np.linspace(-simulation_width / 2, simulation_width / 2, 5000, endpoint=True)
-    zsubstrat = z_source - thermal_history[0]['height'] * np.sqrt(1 - (2 * ypos / thermal_history[0]['width']) ** 2)
-
-    # Création des subplots pour la vue de face et la vue de côté
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6), sharey=True)
-    plt.subplots_adjust(wspace=0)
-
-    # Substrat
-    ax1.fill_between(ypos, 0, zsubstrat, color='black', alpha=0.5)  
-    
-    for layer in range(len(thermal_history)):
-        col = colors[col_keys[layer % len(thermal_history)]]
-        w = thermal_history[layer]['width']
-        d = thermal_history[layer]['height']
-        zpos = z_source - d * np.sqrt(1 - (2 * ypos / w) ** 2)
-        z_source += bd_increment
-
-        ax1.scatter(0, layer * bd_increment + thermal_history[0]['height'], color=col)
-        ax1.plot(ypos, zpos, c=col)
-
-        ax2.hlines(y=layer * bd_increment + thermal_history[0]['height'], xmin=0, xmax=simulation_length, color='k')
-        # ax2.scatter(LENGTH_SIMULATION/2, layer * BD_INCREMENTS + thermal_history[0]['height'], color=col)
-        ax2.hlines(y=np.min(zpos), xmin=0, xmax=simulation_length, color=col)
-        ax2.hlines(y=np.max(zpos), xmin=0, xmax=simulation_length, color=col)
-        ax2.fill_between([0, simulation_length], np.min(zpos), np.max(zpos), color=col, alpha=0.2)
-        
-    # Bordures largeur 
-    ax1.vlines(x=[-simulation_width / 2, simulation_width / 2], ymin=0, ymax=YMAX, color='k')    
-    ax1.hlines(y=YLIM, xmin=-simulation_width / 2, xmax=simulation_width / 2, color='k')
-    ax1.hlines(y=z_ultimate, xmin=-simulation_width / 2, xmax=simulation_width / 2, color='k', ls='--')
-    # Plan de coupe
-    ax1.vlines(x=0, ymin=-0.05, ymax=YMAX+0.05, color='silver', ls='dashdot')
-
-    ax1.set_ylim(-0.05, YMAX + 0.05)
-    ax1.set_aspect('equal', adjustable='box')
-    ax1.set_xlabel('Y axis')
-    ax1.set_ylabel('Z axis')
-    ax1.set_title('Front View')
-    ax1.set_aspect('equal', adjustable='box')
-
-    ax2.set_ylim(-0.05, YMAX + 0.05)
-    ax2.vlines(x=[0, simulation_length], ymin=0, ymax=YMAX, color='k')
-    ax2.hlines(y=z_ultimate, xmin=0, xmax=simulation_length, color='k', ls='--')
-    # ax2.vlines(x=LENGTH_SIMULATION/2, ymin=-0.05, ymax=YMAX+0.05, color='k', ls='dotted')
-    ax2.set_xlabel('X axis')
-    ax2.set_ylabel('Z axis')
-    ax2.set_title('Side View')
-
-    # Domaine
-    xmax = domain['x_max']
-    xmin = domain['x_min']
-    ymax = domain['y_max']
-    ymin = domain['y_min']
-    zmax = domain['z_max']
-    zmin = domain['z_min']
-    color_domain='chartreuse'
-    ax1.hlines(y=[zmin, zmax], xmin=ymin, xmax=ymax, color=color_domain)
-    ax1.vlines(x=[ymin, ymax], ymin=zmin, ymax=zmax, color=color_domain)
-    ax2.hlines(y=[zmin, zmax], xmin=xmin, xmax=xmax, color=color_domain)
-    ax2.vlines(x=[xmin, xmax], ymin=zmin, ymax=zmax, color=color_domain)
-
-    # Plans de coupe
-    color_cut='chartreuse'
-    for plane, position in cut_view:
-        if plane == 'XZ':
-            y_cut = ymin + position * (ymax - ymin)
-            ax1.vlines(x=y_cut, ymin=zmin, ymax=zmax, color=color_cut, ls='dashdot', lw=1.5)
-        elif plane == 'YZ':
-            x_cut = xmin + position * (xmax - xmin)
-            ax2.vlines(x=x_cut, ymin=zmin, ymax=zmax, color=color_cut, ls='dashdot', lw=1.5)
-        elif plane == 'XY':
-            z_cut = zmin + position * (zmax - zmin)
-            ax1.hlines(y=z_cut, xmin=ymin, xmax=ymax, color=color_cut, ls='dashdot', lw=1.5)
-            ax2.hlines(y=z_cut, xmin=xmin, xmax=xmax, color=color_cut, ls='dashdot', lw=1.5)
-
-    # Sauvegarde ou affichage des graphiques
-    plt.tight_layout()
-    if save:
-        plt.savefig(f'{domain_path_dir}/domain_selection.png')
-    else:
-        plt.show()
-    plt.close(fig)
-
 
 ## Debugging zone
 def visualize_growth_vectors_2D(positions, directions, title="Growth directions", save_path=None, scale=0.03):

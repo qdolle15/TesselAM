@@ -1,11 +1,15 @@
 import os
 import sys
+import time
+import numpy as np
 from datetime import datetime
+import matplotlib.pyplot as plt
 
-from grain_growth_model.utils.check_config import ConfigProtocol, validate_config_module
-from grain_growth_model.utils.io import load_config_module, parse_arguments, compare_simulation_data, generate_visualization_report
 from grain_growth_model.neper.runner import EBSD_like
 from grain_growth_model.utils.visualization import show_domains
+from grain_growth_model.utils.check_config import ConfigProtocol, validate_config_module
+from grain_growth_model.neper.neper_visualization import load_images_from_folders, manual_stitch
+from grain_growth_model.utils.io import load_config_module, parse_arguments, compare_simulation_data, generate_visualization_report
 
 def main():
 
@@ -30,7 +34,7 @@ def main():
         # Compare simulation data
         success, errors = compare_simulation_data(report_path=report_path, config_path=args.config_path)
         if not success:
-            print("\n/!\ Differences between the config and the report:")
+            print("\nDifferences between the config and the report:")
             for error in errors:
                 print(f"  - {error}")
             raise ValueError("\nSimulation results may not match with what is asked.\n")
@@ -41,8 +45,14 @@ def main():
         os.makedirs(results_dir, exist_ok=True)
 
         # Visualization for each domain
+        time_start_visualization_module = time.time()
         visualization_results = {}
+        time_information = {}
+
         for i, cut_view in enumerate(config.CUT_VIEWS):
+
+            time_start_layer_visualization = time.time()
+
             domain = cut_view["domain"]
             plans = cut_view["plans"]
 
@@ -73,7 +83,9 @@ def main():
                 domain_path_dir=domain_path_dir
             )
             visualization_results[i] = information
+            time_information[i] = round(time.time() - time_start_layer_visualization, 2)
 
+        time_information['total'] = round(time.time() - time_start_visualization_module, 2)
         print(f"\nVisualization complete. Results saved in: {results_dir}")
 
         # Generate reports
@@ -82,7 +94,21 @@ def main():
             data=visualization_results,
             cut_views=config.CUT_VIEWS,
             output_file=report_file,
+            time_information=time_information
         )
+
+        # Stiching Domains
+        print(f"\nStitchin images from {config.N_SUBDOMAINS} domains")
+        for cut_view in ['025', '050', '075']:
+            images = load_images_from_folders(
+                base_path=results_dir,
+                num_subdomains=config.N_SUBDOMAINS,
+                filename=f"EBSD_z_XZ_{cut_view}.npy",
+                )
+            stitched_images = manual_stitch(images=images)
+
+            np.save(os.path.join(results_dir, f"stitched_image_{cut_view}.npy"), stitched_images)
+            plt.imsave(os.path.join(results_dir, f"stitched_image_{cut_view}.png"), stitched_images)
 
     except FileNotFoundError as e:
         print(f"Error: {e}")

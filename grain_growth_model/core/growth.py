@@ -94,7 +94,8 @@ def simulate_grain_growth(
     inter_seeds_distance:float,
     layer_index: int,
     noise_neper:float,
-    saving_path: str
+    saving_path: str,
+    build_increment:float
 ):
     """
     Simulate the growth of all grains in the current layer using their preferred direction.
@@ -182,7 +183,7 @@ def simulate_grain_growth(
                     half_width=next_layer_MP_description['width'] / 2,
                     depth=next_layer_MP_description['height'],
                     yc=0,
-                    zc=current_z + thermal_layers[0]['height']
+                    zc=current_z + build_increment
                 ):
                     # If so, then computation of the intersection point between the growth direction \
                     # and the foot print of the pass of the next melt pool
@@ -190,7 +191,7 @@ def simulate_grain_growth(
                         point=np.array([xg, yg, zg]),
                         direction=grad,
                         meltpool=next_layer_MP_description,
-                        z0=current_z + thermal_layers[0]['height']
+                        z0=current_z + build_increment
                     )
                     if x_stop > simulation_length:
                         x_stop-=simulation_length
